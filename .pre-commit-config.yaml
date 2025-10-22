@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Elias Mueller
+#
+# SPDX-License-Identifier: MIT
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.19.0
+    hooks:
+      - id: yamlfmt
+        name: "format yml"
+        args:
+          - "-formatter"
+          - "line_ending=lf"
+          - "-formatter"
+          - "retain_line_breaks_single=true"
+          - "-formatter"
+          - "scan_folded_as_literal=true"
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v6.1.2
+    hooks:
+      - id: reuse-lint-file
+        name: "lint licenses"
