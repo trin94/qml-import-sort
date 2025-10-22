@@ -213,9 +213,26 @@ func TestIdentifyRelevantLines(t *testing.T) {
 	}{
 		{
 			input: []string{
+				"import QtQuick",
+				"QtObject{",
+			},
+			expectedStartIdx: 0,
+			expectedEndIdx:   0,
+		},
+		{
+			input: []string{
 				" import QtQuick",
 				"import QtQuick.Controls",
 				"QtObject {",
+			},
+			expectedStartIdx: 0,
+			expectedEndIdx:   1,
+		},
+		{
+			input: []string{
+				"import QtQuick 2.0",
+				"import QtQuick.Controls",
+				"TextInput{",
 			},
 			expectedStartIdx: 0,
 			expectedEndIdx:   1,

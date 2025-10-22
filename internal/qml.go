@@ -14,7 +14,7 @@ import (
 
 var (
 	normalizeImportWhitespace = regexp.MustCompile("^import\\s+")
-	firstStatement            = regexp.MustCompile("^[a-zA-Z0-9.]+\\s+\\{.*")
+	firstStatement            = regexp.MustCompile("^[a-zA-Z0-9.]+\\s*.?\\{.*")
 
 	qtImportRegex       = regexp.MustCompile("^import\\s+Qt[A-Z5.].*")
 	libraryImportRegex  = regexp.MustCompile("^import\\s+[a-zA-Z]+\\..*")
