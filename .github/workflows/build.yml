@@ -58,25 +58,25 @@ jobs:
 
       - name: Build Linux AMD64
         run: |
-          GOOS=linux GOARCH=amd64 go build -o qmlimportsort .
+          GOOS=linux GOARCH=amd64 go build -o qmlimportsort ./cmd/qmlimportsort
           zip qmlimportsort-${{ steps.version.outputs.VERSION }}-linux-amd64.zip qmlimportsort
           rm qmlimportsort
 
       - name: Build Linux ARM64
         run: |
-          GOOS=linux GOARCH=arm64 go build -o qmlimportsort .
+          GOOS=linux GOARCH=arm64 go build -o qmlimportsort ./cmd/qmlimportsort
           zip qmlimportsort-${{ steps.version.outputs.VERSION }}-linux-arm64.zip qmlimportsort
           rm qmlimportsort
 
       - name: Build macOS AMD64
         run: |
-          GOOS=darwin GOARCH=amd64 go build -o qmlimportsort .
+          GOOS=darwin GOARCH=amd64 go build -o qmlimportsort ./cmd/qmlimportsort
           zip qmlimportsort-${{ steps.version.outputs.VERSION }}-darwin-amd64.zip qmlimportsort
           rm qmlimportsort
 
       - name: Build macOS ARM64
         run: |
-          GOOS=darwin GOARCH=arm64 go build -o qmlimportsort .
+          GOOS=darwin GOARCH=arm64 go build -o qmlimportsort ./cmd/qmlimportsort
           zip qmlimportsort-${{ steps.version.outputs.VERSION }}-darwin-arm64.zip qmlimportsort
           rm qmlimportsort
 
