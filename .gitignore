@@ -189,3 +189,5 @@ tags
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/goland+all,vim,intellij+all,visualstudiocode
+
+qmlimportsort
