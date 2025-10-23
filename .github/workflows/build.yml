@@ -6,10 +6,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
-    tags: ['v*']
-  pull_request:
-    branches: [main]
+    branches:
+      - '**'
+    tags:
+      - 'v*'
 
 jobs:
   test:
@@ -44,59 +44,20 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version: '1.24'
 
-      - name: Get version
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Build Linux AMD64
-        run: |
-          GOOS=linux GOARCH=amd64 go build -o qmlimportsort ./cmd/qmlimportsort
-          zip qmlimportsort-${{ steps.version.outputs.VERSION }}-linux-amd64.zip qmlimportsort
-          rm qmlimportsort
-
-      - name: Build Linux ARM64
-        run: |
-          GOOS=linux GOARCH=arm64 go build -o qmlimportsort ./cmd/qmlimportsort
-          zip qmlimportsort-${{ steps.version.outputs.VERSION }}-linux-arm64.zip qmlimportsort
-          rm qmlimportsort
-
-      - name: Build macOS AMD64
-        run: |
-          GOOS=darwin GOARCH=amd64 go build -o qmlimportsort ./cmd/qmlimportsort
-          zip qmlimportsort-${{ steps.version.outputs.VERSION }}-darwin-amd64.zip qmlimportsort
-          rm qmlimportsort
-
-      - name: Build macOS ARM64
-        run: |
-          GOOS=darwin GOARCH=arm64 go build -o qmlimportsort ./cmd/qmlimportsort
-          zip qmlimportsort-${{ steps.version.outputs.VERSION }}-darwin-arm64.zip qmlimportsort
-          rm qmlimportsort
-
-      - name: Build Windows AMD64
-        run: |
-          GOOS=windows GOARCH=amd64 go build -o qmlimportsort.exe .
-          zip qmlimportsort-${{ steps.version.outputs.VERSION }}-windows-amd64.zip qmlimportsort.exe
-          rm qmlimportsort.exe
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-          files: |
-            qmlimportsort-${{ steps.version.outputs.VERSION }}-linux-amd64.zip
-            qmlimportsort-${{ steps.version.outputs.VERSION }}-linux-arm64.zip
-            qmlimportsort-${{ steps.version.outputs.VERSION }}-darwin-amd64.zip
-            qmlimportsort-${{ steps.version.outputs.VERSION }}-darwin-arm64.zip
-            qmlimportsort-${{ steps.version.outputs.VERSION }}-windows-amd64.zip
-          draft: true
-          prerelease: false
-          generate_release_notes: true
+          version: "~> v2"
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
