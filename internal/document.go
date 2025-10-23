@@ -52,7 +52,7 @@ func (d *document) organize() error {
 }
 
 func (d *document) writeBack() error {
-	err := os.WriteFile(d.path, []byte(strings.Join(d.lines, d.lineEnding)), 0644)
+	err := os.WriteFile(d.path, []byte(strings.Join(d.lines, d.lineEnding)), 0600)
 	return errorWithPath(err, d.path)
 }
 
