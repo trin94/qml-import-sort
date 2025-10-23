@@ -190,4 +190,7 @@ tags
 
 # End of https://www.toptal.com/developers/gitignore/api/goland+all,vim,intellij+all,visualstudiocode
 
+# Added by goreleaser init:
+dist/
+
 qmlimportsort
