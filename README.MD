@@ -92,19 +92,27 @@ Download pre-built binaries from the releases page.
 
 Process files and output to stdout:
 
-    qmlimportsort Main.qml Component.qml
+```shell
+qmlimportsort Main.qml Component.qml
+```
 
 Modify files in-place:
 
-    qmlimportsort -i Main.qml Component.qml
+```shell
+qmlimportsort -i Main.qml Component.qml
+```
 
 Process from stdin:
 
-    cat Main.qml | qmlimportsort
+```shell
+cat Main.qml | qmlimportsort
+```
 
 Process all QML files in a directory:
 
-    find . -name "*.qml" -exec qmlimportsort -i {} +
+```shell
+find . -name "*.qml" -exec qmlimportsort -i {} +
+```
 
 ## Development
 
@@ -114,11 +122,15 @@ Process all QML files in a directory:
 
 ### Building
 
-    go build
+```shell
+just build
+```
 
 ### Running Tests
 
-    go test ./...
+```shell
+just test
+```
 
 ## Contributing
 

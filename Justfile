@@ -5,11 +5,16 @@
 alias fmt := format
 
 @_default:
-    just --list
+    just --list --unsorted
 
 format:
     prek run --all-files
-    go fmt
+    go fmt ./...
 
-@test:
-	go test ./... -v
+# Build the qmlimportsort binary
+@build:
+	go build -o qmlimportsort ./cmd/qmlimportsort
+
+# Run all tests
+@test *FLAGS:
+	go test ./... {{ FLAGS }}
