@@ -13,13 +13,13 @@ import (
 )
 
 var (
-	normalizeImportWhitespace = regexp.MustCompile("^import\\s+")
-	firstStatement            = regexp.MustCompile("^[a-zA-Z0-9.]+\\s*.?\\{.*")
+	normalizeImportWhitespace = regexp.MustCompile(`^import\s+`)
+	firstStatement            = regexp.MustCompile(`^[a-zA-Z0-9.]+\s*.?\{.*`)
 
-	qtImportRegex       = regexp.MustCompile("^import\\s+Qt[A-Z5.].*")
-	libraryImportRegex  = regexp.MustCompile("^import\\s+[a-zA-Z]+\\..*")
-	moduleImportRegex   = regexp.MustCompile("^import\\s+[a-zA-Z]\\w*(\\s|$)")
-	relativeImportRegex = regexp.MustCompile("^import\\s+([\"']).*")
+	qtImportRegex       = regexp.MustCompile(`^import\s+Qt[A-Z5.].*`)
+	libraryImportRegex  = regexp.MustCompile(`^import\s+[a-zA-Z]+\..*`)
+	moduleImportRegex   = regexp.MustCompile(`^import\s+[a-zA-Z]\w*(\s|$)`)
+	relativeImportRegex = regexp.MustCompile(`^import\s+(["']).*`)
 )
 
 // identifyRelevantLines returns the start index (inclusive) and end index (inclusive)
