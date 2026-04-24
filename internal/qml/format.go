@@ -6,8 +6,53 @@ package qml
 
 import "errors"
 
+// Options configure Format's classifier. The zero value applies only the
+// default heuristics.
+//
+// LibraryPrefixes and ModulePrefixes let the caller override the default
+// classifier for specific imports. When an import's normalized text
+// starts with any string in LibraryPrefixes, it is classified as library
+// regardless of whether its name contains a dot. Similarly for
+// ModulePrefixes. See Format for the full precedence rules.
+//
+// A prefix is a literal byte-level string match against the import text
+// (the content after "import " with leading/trailing whitespace stripped
+// and internal whitespace collapsed). Include a trailing "." to match
+// only dotted subpaths (e.g. "MyCorp." matches "MyCorp.Foo" but not
+// "MyCorpX").
+//
+// Prefixes are trimmed of leading and trailing whitespace before
+// validation and matching, so "  MyLib  " is treated as "MyLib". This
+// trim happens before all validation rules below, which means an
+// all-whitespace prefix is rejected as empty and a prefix like
+// "  Qt  " is rejected for starting with "Qt".
+//
+// Format validates the Options at entry and returns an error if any of
+// the following rules is violated; every error names the specific
+// offending prefix(es):
+//
+//   - No prefix may be the empty string (after trimming).
+//   - No prefix may start with "." (e.g. ".foo" is rejected).
+//   - No prefix may start with "Qt" or "qt" — Qt imports are their own
+//     category and are not overridable via prefix.
+//   - No prefix may equal "pragma" (pragma is a separate category,
+//     not overridable via prefix).
+//   - Within a single list, no two prefixes may overlap — meaning one
+//     is a prefix of the other, or the two are identical. Duplicates
+//     are reported as "duplicate"; non-identical overlaps (e.g. "Foo"
+//     and "Foo.Bar") are reported as "overlapping".
+//   - Across the two lists, the same rule applies: a prefix in
+//     LibraryPrefixes and a prefix in ModulePrefixes may not overlap
+//     with each other. This catches both exact matches (the prefix
+//     appears in both) and one-is-a-prefix-of-the-other cases.
+type Options struct {
+	LibraryPrefixes []string
+	ModulePrefixes  []string
+}
+
 // Format sorts, groups, and deduplicates QML imports in src, returning
-// the formatted bytes. src is not modified.
+// the formatted bytes. src is not modified. opts configures the
+// classifier; Options{} preserves the default behavior.
 //
 // Line endings are detected from the input — the first \n, \r\n, or \r
 // encountered wins — and that ending is used as the separator throughout
@@ -35,6 +80,22 @@ import "errors"
 //  3. library  — dotted module path, e.g. import io.github.me
 //  4. module   — bare identifier, e.g. import MyModule
 //  5. relative — quoted path, e.g. import "./components"
+//
+// Classification precedence runs top-to-bottom; the first rule that
+// matches wins:
+//
+//  1. pragma keyword             → pragma
+//  2. Qt[A-Z0-9.] pattern        → qt
+//  3. opts.LibraryPrefixes match → library (override)
+//  4. opts.ModulePrefixes match  → module  (override)
+//  5. text contains a dot        → library (default heuristic)
+//  6. text is a bare identifier  → module  (default heuristic)
+//  7. text starts with " or '    → relative
+//  8. none of the above          → error
+//
+// User-configured prefixes are checked before the default dot/bare
+// heuristics, so a caller can both promote (make a bare name count as
+// library) and demote (make a dotted name count as module).
 //
 // Within each category, entries are sorted by normalized text in byte
 // order — case-sensitive, so "A" < "a" per ASCII. Duplicates (by
@@ -75,8 +136,9 @@ import "errors"
 // A file with no imports (and no pragmas) is valid input and is
 // returned unchanged.
 //
-// Returns an error if a line inside the block cannot be classified as
+// Returns an error if opts fails validation (see Options for the full
+// list of rules) or if a line inside the block cannot be classified as
 // a pragma, import, comment, or blank line.
-func Format(src []byte) ([]byte, error) {
+func Format(src []byte, opts Options) ([]byte, error) {
 	return nil, errors.New("qml.Format: not implemented")
 }
