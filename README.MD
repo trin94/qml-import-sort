@@ -80,13 +80,15 @@ Download pre-built binaries from the releases page.
 
 ## Usage
 
-    USAGE:
-       qmlimportsort [flags] [files...]
+```
+USAGE:
+   qmlimportsort [flags] [files...]
 
-    FLAGS:
-       --in-place, -i  modify files in-place (only valid with files)
-       --help, -h      show help
-       --version, -v   print the version
+FLAGS:
+   --in-place, -i  modify files in-place (only valid with files)
+   --help, -h      show help
+   --version, -v   print the version
+```
 
 ### Examples
 
