@@ -34,13 +34,15 @@ Each `<path>` is a file or directory. Directories are walked recursively.
 
 ### Flags
 
-| Flag        | Short | Purpose                                                                              |
-| ----------- | ----- | ------------------------------------------------------------------------------------ |
-| `--check`   | `-c`  | Don't write. Print paths that would change to stdout, one per line. Exit 1 if any.   |
-| `--stdout`  |       | Don't write. Print formatted content to stdout. Single file only (see restrictions). |
-| `--stdin`   |       | Read from stdin, write to stdout. Mutually exclusive with positional paths.          |
-| `--version` |       | Print version, exit 0.                                                               |
-| `--help`    | `-h`  | Print usage, exit 0.                                                                 |
+| Flag               | Short | Purpose                                                                                                        |
+| ------------------ | ----- | -------------------------------------------------------------------------------------------------------------- |
+| `--check`          | `-c`  | Don't write. Print paths that would change to stdout, one per line. Exit 1 if any.                             |
+| `--stdout`         |       | Don't write. Print formatted content to stdout. Single file only (see restrictions).                           |
+| `--stdin`          |       | Read from stdin, write to stdout. Mutually exclusive with positional paths.                                    |
+| `--library-prefix` |       | Additional prefix to classify as a library import. Repeatable. Overrides the default dot-heuristic.            |
+| `--module-prefix`  |       | Additional prefix to classify as a module import. Repeatable. Overrides the default bare-identifier heuristic. |
+| `--version`        |       | Print version, exit 0.                                                                                         |
+| `--help`           | `-h`  | Print usage, exit 0.                                                                                           |
 
 ### Flag combinations
 
@@ -51,6 +53,28 @@ Each `<path>` is a file or directory. Directories are walked recursively.
 - `--stdin` combined with `--stdout`: redundant but allowed — stdin already goes to stdout.
 - `--stdout` requires exactly one input that is a file. Passing a directory, or more than one path, with `--stdout` is a
   usage error (exit 2). Rationale: no unambiguous way to concatenate multiple files' output.
+- Prefix values are trimmed of leading and trailing whitespace before validation and matching (`--library-prefix="  Foo  "` is treated as `Foo`).
+- Prefix values are validated (usage error, exit 2) if any of the following holds:
+  - an empty prefix is given (or one that is all whitespace, which trims to empty),
+  - a prefix starts with `.`,
+  - a prefix starts with `Qt` or `qt`,
+  - a prefix equals `pragma`,
+  - two prefixes overlap — either identical or one-is-a-prefix-of-the-other — whether within one flag or across `--library-prefix` and `--module-prefix`.
+    The error names the specific prefix(es) involved.
+
+### Classification override (`--library-prefix` / `--module-prefix`)
+
+Both flags are repeatable. Each occurrence adds one literal prefix that is matched byte-for-byte against the normalized import text (the content after `import ` with whitespace trimmed). Include a trailing `.` in the prefix to create a boundary: `--module-prefix=MyCorp.` matches `import MyCorp.Foo` but not `import MyCorpExternal`.
+
+User prefixes take precedence over the default dot/bare heuristic, so they can both promote (make a bare name count as library) and demote (make a dotted name count as module). The category precedence order is: pragma, qt, `--library-prefix`, `--module-prefix`, default library (dotted), default module (bare), relative.
+
+Example:
+
+```
+qmlimportsort --module-prefix=AppComponents. --library-prefix=MyLib src/
+```
+
+Anything starting with `AppComponents.` is classified as a module; `MyLib` (bare) is classified as a library.
 
 ### Directory walking
 
