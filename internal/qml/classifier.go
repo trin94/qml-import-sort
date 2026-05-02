@@ -32,8 +32,8 @@ type Options struct {
 	// A prefix is a literal byte-level string match against the import
 	// text (the content after "import " with leading/trailing
 	// whitespace stripped and internal whitespace collapsed). Include
-	// a trailing "." to match only dotted subpaths — "MyCorp." matches
-	// "MyCorp.Foo" but not "MyCorpX".
+	// a trailing "." to match only dotted subpaths — "io.github.mpvqc."
+	// matches "io.github.mpvqc.Foo" but not "io.github.mpvqcExternal".
 	//
 	// Prefixes are trimmed of leading and trailing whitespace before
 	// validation and matching. Trim happens before every rule below,
