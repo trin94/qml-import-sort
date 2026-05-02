@@ -414,7 +414,7 @@ func TestFormatPreamble(t *testing.T) {
 			name:       "preamble with a single-line block comment is preserved",
 			lineEnding: "\n",
 			input: []string{
-				"/* SPDX-License-Identifier: MIT */",
+				"/* preamble */",
 				"",
 				"import QtQuick",
 				"",
@@ -422,7 +422,7 @@ func TestFormatPreamble(t *testing.T) {
 				"}",
 			},
 			expected: []string{
-				"/* SPDX-License-Identifier: MIT */",
+				"/* preamble */",
 				"",
 				"import QtQuick",
 				"",
