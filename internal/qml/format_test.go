@@ -28,7 +28,11 @@ func runFormatCases(t *testing.T, cases []formatCase) {
 			}
 			input := strings.Join(tc.input, tc.lineEnding) + tc.lineEnding
 
-			got, err := Format([]byte(input), tc.options)
+			c, err := Compile(tc.options)
+			var got []byte
+			if err == nil {
+				got, err = Format([]byte(input), c)
+			}
 
 			if tc.wantErr {
 				if err == nil {
@@ -42,7 +46,7 @@ func runFormatCases(t *testing.T, cases []formatCase) {
 			}
 
 			if err != nil {
-				t.Fatalf("Format returned error: %v", err)
+				t.Fatalf("Compile/Format returned error: %v", err)
 			}
 
 			expected := strings.Join(tc.expected, tc.lineEnding) + tc.lineEnding
@@ -51,7 +55,7 @@ func runFormatCases(t *testing.T, cases []formatCase) {
 				return
 			}
 
-			got2, err := Format(got, tc.options)
+			got2, err := Format(got, c)
 			if err != nil {
 				t.Fatalf("second Format returned error: %v", err)
 			}
@@ -81,7 +85,7 @@ func TestFormatClassification(t *testing.T) {
 			},
 		},
 		{
-			name:       "single library import passes through unchanged",
+			name:       "single dotted third-party import passes through unchanged",
 			lineEnding: "\n",
 			input: []string{
 				"import io.github.me 1.0",
@@ -97,7 +101,7 @@ func TestFormatClassification(t *testing.T) {
 			},
 		},
 		{
-			name:       "single module import passes through unchanged",
+			name:       "single bare-identifier third-party import passes through unchanged",
 			lineEnding: "\n",
 			input: []string{
 				"import MyModule",
@@ -181,7 +185,7 @@ func TestFormatClassification(t *testing.T) {
 			},
 		},
 		{
-			name:       "library import without version classifies correctly",
+			name:       "dotted third-party import without version classifies correctly",
 			lineEnding: "\n",
 			input: []string{
 				"import io.github.me",
@@ -197,7 +201,7 @@ func TestFormatClassification(t *testing.T) {
 			},
 		},
 		{
-			name:       "module import with version classifies correctly",
+			name:       "bare-identifier third-party import with version classifies correctly",
 			lineEnding: "\n",
 			input: []string{
 				"import MyModule 1.0",
@@ -269,9 +273,8 @@ func TestFormatSorting(t *testing.T) {
 				"",
 				"import QtQuick",
 				"",
-				"import io.github.me",
-				"",
 				"import MyModule",
+				"import io.github.me",
 				"",
 				`import "./components"`,
 				"",
@@ -688,7 +691,7 @@ func TestFormatBlankLines(t *testing.T) {
 			},
 		},
 		{
-			name:       "multiple consecutive blanks between same-category imports collapse to one",
+			name:       "blanks between same-category imports are stripped",
 			lineEnding: "\n",
 			input: []string{
 				"import YourModule",
@@ -702,27 +705,6 @@ func TestFormatBlankLines(t *testing.T) {
 			},
 			expected: []string{
 				"import MyModule",
-				"",
-				"import YourModule",
-				"",
-				"Rectangle {",
-				"}",
-			},
-		},
-		{
-			name:       "single blank between same-category imports is preserved after sort",
-			lineEnding: "\n",
-			input: []string{
-				"import YourModule",
-				"",
-				"import MyModule",
-				"",
-				"Rectangle {",
-				"}",
-			},
-			expected: []string{
-				"import MyModule",
-				"",
 				"import YourModule",
 				"",
 				"Rectangle {",
@@ -735,12 +717,11 @@ func TestFormatBlankLines(t *testing.T) {
 func TestFormatComments(t *testing.T) {
 	runFormatCases(t, []formatCase{
 		{
-			name:       "comments inside import block travel with next import through sort",
+			name:       "comments inside the block are hoisted in input order",
 			lineEnding: "\n",
 			input: []string{
 				"// note about YourModule",
 				"import YourModule",
-				"",
 				"// note about MyModule",
 				"import MyModule",
 				"",
@@ -748,10 +729,10 @@ func TestFormatComments(t *testing.T) {
 				"}",
 			},
 			expected: []string{
-				"// note about MyModule",
-				"import MyModule",
-				"",
 				"// note about YourModule",
+				"// note about MyModule",
+				"",
+				"import MyModule",
 				"import YourModule",
 				"",
 				"Rectangle {",
@@ -759,7 +740,7 @@ func TestFormatComments(t *testing.T) {
 			},
 		},
 		{
-			name:       "multiple consecutive comments attach to the following import",
+			name:       "multiple consecutive comments are all hoisted in input order",
 			lineEnding: "\n",
 			input: []string{
 				"// first comment for ZZZ",
@@ -772,10 +753,11 @@ func TestFormatComments(t *testing.T) {
 				"}",
 			},
 			expected: []string{
-				"// comment for AAA",
-				"import AAA",
 				"// first comment for ZZZ",
 				"// second comment for ZZZ",
+				"// comment for AAA",
+				"",
+				"import AAA",
 				"import ZZZ",
 				"",
 				"Rectangle {",
@@ -800,7 +782,7 @@ func TestFormatComments(t *testing.T) {
 			},
 		},
 		{
-			name:       "indented line comment inside the block has its indentation stripped",
+			name:       "indented line comment inside the block has its indentation stripped when hoisted",
 			lineEnding: "\n",
 			input: []string{
 				"import YourModule",
@@ -812,6 +794,7 @@ func TestFormatComments(t *testing.T) {
 			},
 			expected: []string{
 				"// indented note about MyModule",
+				"",
 				"import MyModule",
 				"import YourModule",
 				"",
@@ -820,7 +803,7 @@ func TestFormatComments(t *testing.T) {
 			},
 		},
 		{
-			name:       "block comment inside the block preserves its alignment and travels with its import",
+			name:       "block comment inside the block is hoisted with its alignment preserved",
 			lineEnding: "\n",
 			input: []string{
 				"import YourModule",
@@ -836,6 +819,7 @@ func TestFormatComments(t *testing.T) {
 				"/*",
 				" * note about MyModule",
 				" */",
+				"",
 				"import MyModule",
 				"import YourModule",
 				"",
@@ -844,7 +828,7 @@ func TestFormatComments(t *testing.T) {
 			},
 		},
 		{
-			name:       "single-line block comment inside the block attaches to the following import",
+			name:       "single-line block comment inside the block is hoisted",
 			lineEnding: "\n",
 			input: []string{
 				"import YourModule",
@@ -856,6 +840,7 @@ func TestFormatComments(t *testing.T) {
 			},
 			expected: []string{
 				"/* note about MyModule */",
+				"",
 				"import MyModule",
 				"import YourModule",
 				"",
@@ -885,7 +870,7 @@ func TestFormatComments(t *testing.T) {
 			},
 		},
 		{
-			name:       "line that looks like an import inside a comment remains a comment",
+			name:       "line that looks like an import inside a comment remains a comment and is hoisted",
 			lineEnding: "\n",
 			input: []string{
 				"import QtQuick",
@@ -897,6 +882,7 @@ func TestFormatComments(t *testing.T) {
 			},
 			expected: []string{
 				"// import QtQml",
+				"",
 				"import QtQml",
 				"import QtQuick",
 				"",
@@ -905,7 +891,7 @@ func TestFormatComments(t *testing.T) {
 			},
 		},
 		{
-			name:       "comment between pragmas travels with the following pragma through sort",
+			name:       "comment between pragmas is hoisted above the import groups",
 			lineEnding: "\n",
 			input: []string{
 				"pragma Singleton",
@@ -919,6 +905,7 @@ func TestFormatComments(t *testing.T) {
 			},
 			expected: []string{
 				"// note about ComponentBehavior",
+				"",
 				"pragma ComponentBehavior: Bound",
 				"pragma Singleton",
 				"",
@@ -1178,19 +1165,22 @@ func TestFormatDeduplication(t *testing.T) {
 			},
 		},
 		{
-			name:       "when duplicates have different comments the first occurrence's comment wins",
+			name:       "duplicate imports are removed but every block comment is kept in the hoisted section",
 			lineEnding: "\n",
 			input: []string{
-				"// first comment",
 				"import QtQuick",
-				"// second comment",
+				"// first block comment",
+				"import QtQuick",
+				"// second block comment",
 				"import QtQuick",
 				"",
 				"Rectangle {",
 				"}",
 			},
 			expected: []string{
-				"// first comment",
+				"// first block comment",
+				"// second block comment",
+				"",
 				"import QtQuick",
 				"",
 				"Rectangle {",
@@ -1243,7 +1233,7 @@ func TestFormatErrors(t *testing.T) {
 
 func TestFormatEdgeCases(t *testing.T) {
 	t.Run("empty input returns empty output without error", func(t *testing.T) {
-		got, err := Format([]byte{}, Options{})
+		got, err := Format([]byte{}, nil)
 		if err != nil {
 			t.Fatalf("Format returned error: %v", err)
 		}
@@ -1253,7 +1243,7 @@ func TestFormatEdgeCases(t *testing.T) {
 	})
 
 	t.Run("whitespace-only input returns empty output", func(t *testing.T) {
-		got, err := Format([]byte("\n\n\n"), Options{})
+		got, err := Format([]byte("\n\n\n"), nil)
 		if err != nil {
 			t.Fatalf("Format returned error: %v", err)
 		}
@@ -1265,7 +1255,7 @@ func TestFormatEdgeCases(t *testing.T) {
 	t.Run("input without trailing newline preserves that property", func(t *testing.T) {
 		input := "import QtQuick\nRectangle {}"
 		expected := "import QtQuick\n\nRectangle {}"
-		got, err := Format([]byte(input), Options{})
+		got, err := Format([]byte(input), nil)
 		if err != nil {
 			t.Fatalf("Format returned error: %v", err)
 		}
@@ -1280,7 +1270,7 @@ func TestFormatEdgeCases(t *testing.T) {
 		// gets stripped by the import-line normalization rule.
 		input := "import QtQuick\nimport QtQml\r\n"
 		expected := "import QtQml\nimport QtQuick\n"
-		got, err := Format([]byte(input), Options{})
+		got, err := Format([]byte(input), nil)
 		if err != nil {
 			t.Fatalf("Format returned error: %v", err)
 		}
@@ -1325,16 +1315,16 @@ func TestFormatIntegration(t *testing.T) {
 				" * SPDX-License-Identifier: MIT",
 				" */",
 				"",
+				"// note about MyLib",
+				"",
 				"pragma ComponentBehavior: Bound",
 				"pragma Singleton",
 				"",
 				"import QtQml",
 				"import QtQuick",
 				"",
-				"// note about MyLib",
-				"import io.github.mylib",
-				"",
 				"import MyModule",
+				"import io.github.mylib",
 				"",
 				`import "./components"`,
 				"",
@@ -1348,12 +1338,12 @@ func TestFormatIntegration(t *testing.T) {
 	})
 }
 
-func TestFormatCustomPrefixes(t *testing.T) {
+func TestFormatFirstPartyPrefixes(t *testing.T) {
 	runFormatCases(t, []formatCase{
 		{
-			name:       "library prefix promotes a bare identifier into the library group",
+			name:       "first-party prefix carves a bare identifier out of third-party",
 			lineEnding: "\n",
-			options:    Options{LibraryPrefixes: []string{"MyLib"}},
+			options:    Options{FirstPartyPrefixes: []string{"MyLib"}},
 			input: []string{
 				"import MyLib",
 				"import QtQuick",
@@ -1371,9 +1361,9 @@ func TestFormatCustomPrefixes(t *testing.T) {
 			},
 		},
 		{
-			name:       "module prefix demotes a dotted name into the module group",
+			name:       "first-party prefix matches a dotted name",
 			lineEnding: "\n",
-			options:    Options{ModulePrefixes: []string{"MyCorp."}},
+			options:    Options{FirstPartyPrefixes: []string{"MyCorp."}},
 			input: []string{
 				"import MyCorp.Foo",
 				"import io.github.other",
@@ -1393,7 +1383,7 @@ func TestFormatCustomPrefixes(t *testing.T) {
 		{
 			name:       "trailing dot in the prefix creates a boundary that does not match siblings",
 			lineEnding: "\n",
-			options:    Options{ModulePrefixes: []string{"MyCorp."}},
+			options:    Options{FirstPartyPrefixes: []string{"MyCorp."}},
 			input: []string{
 				"import MyCorp.Foo",
 				"import MyCorpExternal.Bar",
@@ -1411,15 +1401,9 @@ func TestFormatCustomPrefixes(t *testing.T) {
 			},
 		},
 		{
-			name:       "library and module prefixes combine across a mixed input",
+			name:       "default options put every non-Qt non-relative import into a single third-party group",
 			lineEnding: "\n",
-			options: Options{
-				LibraryPrefixes: []string{"MyLib"},
-				ModulePrefixes:  []string{"MyCorp."},
-			},
 			input: []string{
-				"import MyLib",
-				"import MyCorp.Foo",
 				"import QtQuick",
 				"import io.github.other",
 				"import PlainModule",
@@ -1430,20 +1414,17 @@ func TestFormatCustomPrefixes(t *testing.T) {
 			expected: []string{
 				"import QtQuick",
 				"",
-				"import MyLib",
-				"import io.github.other",
-				"",
-				"import MyCorp.Foo",
 				"import PlainModule",
+				"import io.github.other",
 				"",
 				"Rectangle {",
 				"}",
 			},
 		},
 		{
-			name:       "multiple prefixes of the same kind are all honored",
+			name:       "multiple first-party prefixes are all honored",
 			lineEnding: "\n",
-			options:    Options{LibraryPrefixes: []string{"Alpha", "Beta"}},
+			options:    Options{FirstPartyPrefixes: []string{"Alpha", "Beta"}},
 			input: []string{
 				"import Alpha",
 				"import Beta",
@@ -1453,42 +1434,19 @@ func TestFormatCustomPrefixes(t *testing.T) {
 				"}",
 			},
 			expected: []string{
+				"import Gamma",
+				"",
 				"import Alpha",
 				"import Beta",
 				"",
-				"import Gamma",
-				"",
 				"Rectangle {",
 				"}",
 			},
 		},
 		{
-			name:       "user prefix does not change classification of unrelated imports",
+			name:       "first-party prefix matches imports with a trailing '//' comment",
 			lineEnding: "\n",
-			options:    Options{ModulePrefixes: []string{"MyCorp."}},
-			input: []string{
-				"import QtQuick",
-				"import io.github.other",
-				"import PlainModule",
-				"",
-				"Rectangle {",
-				"}",
-			},
-			expected: []string{
-				"import QtQuick",
-				"",
-				"import io.github.other",
-				"",
-				"import PlainModule",
-				"",
-				"Rectangle {",
-				"}",
-			},
-		},
-		{
-			name:       "user prefix matches imports with a trailing '//' comment",
-			lineEnding: "\n",
-			options:    Options{LibraryPrefixes: []string{"MyLib"}},
+			options:    Options{FirstPartyPrefixes: []string{"MyLib"}},
 			input: []string{
 				"import MyLib // project internal library",
 				"import PlainModule",
@@ -1497,9 +1455,9 @@ func TestFormatCustomPrefixes(t *testing.T) {
 				"}",
 			},
 			expected: []string{
-				"import MyLib // project internal library",
-				"",
 				"import PlainModule",
+				"",
+				"import MyLib // project internal library",
 				"",
 				"Rectangle {",
 				"}",
@@ -1508,7 +1466,7 @@ func TestFormatCustomPrefixes(t *testing.T) {
 		{
 			name:       "leading and trailing whitespace in prefixes is trimmed before use",
 			lineEnding: "\n",
-			options:    Options{LibraryPrefixes: []string{"  MyLib  "}},
+			options:    Options{FirstPartyPrefixes: []string{"  MyLib  "}},
 			input: []string{
 				"import MyLib",
 				"import PlainModule",
@@ -1517,18 +1475,18 @@ func TestFormatCustomPrefixes(t *testing.T) {
 				"}",
 			},
 			expected: []string{
-				"import MyLib",
-				"",
 				"import PlainModule",
+				"",
+				"import MyLib",
 				"",
 				"Rectangle {",
 				"}",
 			},
 		},
 		{
-			name:       "user prefix matches against whitespace-normalized import text",
+			name:       "first-party prefix matches against whitespace-normalized import text",
 			lineEnding: "\n",
-			options:    Options{LibraryPrefixes: []string{"MyLib 1.0"}},
+			options:    Options{FirstPartyPrefixes: []string{"MyLib 1.0"}},
 			input: []string{
 				"import  MyLib   1.0",
 				"import OtherModule",
@@ -1537,28 +1495,24 @@ func TestFormatCustomPrefixes(t *testing.T) {
 				"}",
 			},
 			expected: []string{
-				"import MyLib 1.0",
-				"",
 				"import OtherModule",
+				"",
+				"import MyLib 1.0",
 				"",
 				"Rectangle {",
 				"}",
 			},
 		},
 		{
-			name:       "prefixes combine with sort, dedup, and within-category blanks",
+			name:       "first-party imports are sorted and deduplicated within their group",
 			lineEnding: "\n",
-			options: Options{
-				LibraryPrefixes: []string{"MyLib"},
-				ModulePrefixes:  []string{"MyCorp."},
-			},
+			options:    Options{FirstPartyPrefixes: []string{"MyCorp."}},
 			input: []string{
 				"import QtQuick",
+				"import MyCorp.Charlie",
 				"import MyCorp.Alpha",
-				"",
 				"import MyCorp.Beta",
-				"import MyLib",
-				"import MyLib",
+				"import MyCorp.Alpha",
 				"import io.github.other",
 				"",
 				"Rectangle {",
@@ -1567,199 +1521,15 @@ func TestFormatCustomPrefixes(t *testing.T) {
 			expected: []string{
 				"import QtQuick",
 				"",
-				"import MyLib",
 				"import io.github.other",
 				"",
 				"import MyCorp.Alpha",
-				"",
 				"import MyCorp.Beta",
+				"import MyCorp.Charlie",
 				"",
 				"Rectangle {",
 				"}",
 			},
-		},
-	})
-}
-
-func TestFormatInvalidOptions(t *testing.T) {
-	// Minimal input used by every case — the error must come from the
-	// options, not the document content.
-	minimalInput := []string{
-		"import QtQuick",
-		"",
-		"Rectangle {",
-		"}",
-	}
-
-	runFormatCases(t, []formatCase{
-		{
-			name:            "empty prefix in LibraryPrefixes is rejected",
-			lineEnding:      "\n",
-			options:         Options{LibraryPrefixes: []string{""}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: "empty prefix",
-		},
-		{
-			name:            "empty prefix in ModulePrefixes is rejected",
-			lineEnding:      "\n",
-			options:         Options{ModulePrefixes: []string{""}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: "empty prefix",
-		},
-		{
-			name:            "prefix starting with '.' in LibraryPrefixes is rejected",
-			lineEnding:      "\n",
-			options:         Options{LibraryPrefixes: []string{".foo"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `".foo"`,
-		},
-		{
-			name:            "prefix starting with '.' in ModulePrefixes is rejected",
-			lineEnding:      "\n",
-			options:         Options{ModulePrefixes: []string{".bar"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `".bar"`,
-		},
-		{
-			name:            "prefix equal to 'pragma' in LibraryPrefixes is rejected",
-			lineEnding:      "\n",
-			options:         Options{LibraryPrefixes: []string{"pragma"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"pragma"`,
-		},
-		{
-			name:            "prefix equal to 'pragma' in ModulePrefixes is rejected",
-			lineEnding:      "\n",
-			options:         Options{ModulePrefixes: []string{"pragma"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"pragma"`,
-		},
-		{
-			name:            "duplicate prefix in LibraryPrefixes is rejected and names the prefix",
-			lineEnding:      "\n",
-			options:         Options{LibraryPrefixes: []string{"Foo", "Foo"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"Foo"`,
-		},
-		{
-			name:            "duplicate prefix in ModulePrefixes is rejected and names the prefix",
-			lineEnding:      "\n",
-			options:         Options{ModulePrefixes: []string{"Bar.", "Bar."}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"Bar."`,
-		},
-		{
-			name:            "prefix-of-prefix overlap within LibraryPrefixes is rejected and names both",
-			lineEnding:      "\n",
-			options:         Options{LibraryPrefixes: []string{"Foo", "Foo.Bar"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"Foo.Bar"`,
-		},
-		{
-			name:            "prefix-of-prefix overlap within a list is detected regardless of order (longer first)",
-			lineEnding:      "\n",
-			options:         Options{LibraryPrefixes: []string{"Foo.Bar", "Foo"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"Foo.Bar"`,
-		},
-		{
-			name:            "prefix-of-prefix overlap within ModulePrefixes is rejected and names both",
-			lineEnding:      "\n",
-			options:         Options{ModulePrefixes: []string{"Foo", "Foo.Bar"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"Foo.Bar"`,
-		},
-		{
-			name:       "same prefix in both LibraryPrefixes and ModulePrefixes is rejected and names the prefix",
-			lineEnding: "\n",
-			options: Options{
-				LibraryPrefixes: []string{"Foo."},
-				ModulePrefixes:  []string{"Foo."},
-			},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"Foo."`,
-		},
-		{
-			name:       "prefix-of-prefix overlap across lists is rejected and names both",
-			lineEnding: "\n",
-			options: Options{
-				LibraryPrefixes: []string{"Foo"},
-				ModulePrefixes:  []string{"Foo.Bar"},
-			},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"Foo.Bar"`,
-		},
-		{
-			name:       "prefix-of-prefix overlap across lists is detected with the shorter prefix in the other list",
-			lineEnding: "\n",
-			options: Options{
-				LibraryPrefixes: []string{"Foo.Bar"},
-				ModulePrefixes:  []string{"Foo"},
-			},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"Foo.Bar"`,
-		},
-		{
-			name:            "all-whitespace prefix is trimmed to empty and rejected",
-			lineEnding:      "\n",
-			options:         Options{LibraryPrefixes: []string{"   "}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: "empty prefix",
-		},
-		{
-			name:            "prefix starting with 'Qt' in LibraryPrefixes is rejected",
-			lineEnding:      "\n",
-			options:         Options{LibraryPrefixes: []string{"QtCustom"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"QtCustom"`,
-		},
-		{
-			name:            "prefix starting with 'Qt' in ModulePrefixes is rejected",
-			lineEnding:      "\n",
-			options:         Options{ModulePrefixes: []string{"QtCustom"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"QtCustom"`,
-		},
-		{
-			name:            "prefix starting with 'qt' in LibraryPrefixes is rejected",
-			lineEnding:      "\n",
-			options:         Options{LibraryPrefixes: []string{"qtcustom"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"qtcustom"`,
-		},
-		{
-			name:            "prefix starting with 'qt' in ModulePrefixes is rejected",
-			lineEnding:      "\n",
-			options:         Options{ModulePrefixes: []string{"qtcustom"}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"qtcustom"`,
-		},
-		{
-			name:            "prefix with surrounding whitespace is trimmed before the Qt-start check",
-			lineEnding:      "\n",
-			options:         Options{LibraryPrefixes: []string{"  QtCustom  "}},
-			input:           minimalInput,
-			wantErr:         true,
-			wantErrContains: `"QtCustom"`,
 		},
 	})
 }
