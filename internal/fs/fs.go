@@ -149,9 +149,9 @@ func writeAtomic(path string, data []byte, mode os.FileMode) error {
 	tmpPath := tmp.Name()
 	success := false
 	defer func() {
-		tmp.Close()
+		_ = tmp.Close()
 		if !success {
-			os.Remove(tmpPath)
+			_ = os.Remove(tmpPath)
 		}
 	}()
 	if _, err := tmp.Write(data); err != nil {

@@ -101,13 +101,3 @@ func Compile(opts Options) (*Classifier, error) {
 	}
 	return &Classifier{firstPartyPrefixes: prefixes}, nil
 }
-
-// MustCompile is like Compile but panics if opts fail validation.
-// Intended for caller-controlled inputs and tests.
-func MustCompile(opts Options) *Classifier {
-	c, err := Compile(opts)
-	if err != nil {
-		panic(err)
-	}
-	return c
-}

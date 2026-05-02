@@ -94,7 +94,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	classifier, err := qml.Compile(qml.Options{FirstPartyPrefixes: []string(prefixes)})
+	classifier, err := qml.Compile(qml.Options{FirstPartyPrefixes: prefixes})
 	if err != nil {
 		reportErr(stderr, err)
 		return 2
