@@ -116,18 +116,27 @@ func TestFormatFile_DoesNotWriteWhenUnchanged(t *testing.T) {
 func TestFormatFile_PreservesMode(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.qml")
-	mode := os.FileMode(0o640)
-	writeQML(t, path, unformatted, mode)
+	// On Windows, Go's file-mode bits are largely synthesized from the
+	// read-only attribute, so 0o640 on disk reads back as 0o666. The
+	// preservation property we actually care about is "mode after
+	// FormatFile == mode before FormatFile" — capture whatever the OS
+	// stored and compare against that.
+	writeQML(t, path, unformatted, 0o640)
+	before, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := FormatFile(path, nil); err != nil {
 		t.Fatalf("FormatFile: %v", err)
 	}
-	info, err := os.Stat(path)
+	after, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != mode {
-		t.Errorf("mode = %o, want %o", info.Mode().Perm(), mode)
+	if after.Mode().Perm() != before.Mode().Perm() {
+		t.Errorf("mode = %o, want %o (preserved from before format)",
+			after.Mode().Perm(), before.Mode().Perm())
 	}
 }
 
