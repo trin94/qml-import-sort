@@ -6,35 +6,20 @@ SPDX-License-Identifier: MIT
 
 # qmlimportsort
 
-A tool to automatically organize and sort QML import statements according to best practices.
+A tool to organize and sort QML import statements.
 
 > [!CAUTION]
-> This tool is in very early development. Use at your own risk.
+> This tool is in early development. Use at your own risk.
 
-> [!WARNING]
-> The current version of the tool removes comments between an optional license header and the start of the component.
+> [!IMPORTANT]
+> This is a vibe-coded project — most of the code was written collaboratively with an AI assistant.
 
-## Features
+> [!NOTE]
+> Comments between two imports are hoisted into a single comment section above the imports — they do not travel with their original import line through sorting. To attach a note to a specific import, put it as a trailing comment on the same line (e.g. `import QtQuick // note`).
 
-- Automatically organizes QML imports into logical groups
-- Sorts imports alphabetically within each group
-- Preserves line endings across platforms (Unix, Windows, macOS)
-- Supports stdin/stdout workflow or in-place file modification
-- Can process multiple files at once
+## Example
 
-## Import Organization
-
-The tool organizes imports in the following order, with blank lines between groups:
-
-1. Pragmas (e.g., pragma Singleton)
-2. Qt imports (e.g., import QtQuick, import QtQuick.Controls)
-3. Library imports (e.g., import org.kde.kirigami)
-4. Module imports (e.g., import MyModule)
-5. Relative imports (e.g., import "../components")
-
-Within each group, imports are sorted alphabetically.
-
-### Example
+Imports are grouped into pragmas, Qt, third-party, first-party (opt-in), and relative — sorted and de-duplicated within each group, separated by a blank line.
 
 Before:
 
@@ -63,78 +48,44 @@ pragma Singleton
 import QtQuick
 import QtQuick.Controls
 
-import org.kde.kirigami as Kirigami
-
 import MyModule
+import org.kde.kirigami as Kirigami
 
 import "../components"
 
 QtObject {}
 ```
 
-## Installation
-
-### Pre-built Binaries
-
-Download pre-built binaries from the releases page.
-
 ## Usage
 
-    USAGE:
-       qmlimportsort [flags] [files...]
-
-    FLAGS:
-       --in-place, -i  modify files in-place (only valid with files)
-       --help, -h      show help
-       --version, -v   print the version
-
-### Examples
-
-Process files and output to stdout:
-
 ```shell
-qmlimportsort Main.qml Component.qml
+# Format files or directories in place
+qmlimportsort Main.qml
+qmlimportsort src/
+
+# Dry run — print paths that would change, exit 1 if any
+qmlimportsort --check src/
+
+# Print formatted content to stdout, leave file untouched
+qmlimportsort --stdout Main.qml
+
+# Pipe through stdin/stdout
+cat Main.qml | qmlimportsort --stdin
+
+# Mark imports owned by your project as first-party (repeatable)
+qmlimportsort --first-party-prefix=io.github.mpvqc. src/
 ```
 
-Modify files in-place:
-
-```shell
-qmlimportsort -i Main.qml Component.qml
-```
-
-Process from stdin:
-
-```shell
-cat Main.qml | qmlimportsort
-```
-
-Process all QML files in a directory:
-
-```shell
-find . -name "*.qml" -exec qmlimportsort -i {} +
-```
+Run `qmlimportsort --help` for the full flag list.
 
 ## Development
 
-### Prerequisites
-
-- Go 1.24 or later
-
-### Building
+Requires Go 1.24+.
 
 ```shell
 just build
-```
-
-### Running Tests
-
-```shell
 just test
 ```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ## License
 

@@ -194,3 +194,4 @@ tags
 dist/
 
 qmlimportsort
+!cmd/
