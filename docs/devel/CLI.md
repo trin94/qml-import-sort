@@ -10,11 +10,13 @@ The flag list, synopsis, and exact mode behavior live in `qmlimportsort --help` 
 
 ## Exit codes
 
-| Code | Meaning                                                                           |
-| ---- | --------------------------------------------------------------------------------- |
-| 0    | Success. Write mode: all inputs processed cleanly. Check mode: no changes needed. |
-| 1    | `--check` mode only: at least one file would change.                              |
-| 2    | Usage error, or one or more inputs failed (missing file, parse error, IO error).  |
+| Code | Meaning                                                                          |
+| ---- | -------------------------------------------------------------------------------- |
+| 0    | Success. Write mode: nothing needed to change. Check mode: nothing would change. |
+| 1    | At least one file changed (write mode) or would change (check mode).             |
+| 2    | Usage error, or one or more inputs failed (missing file, parse error, IO error). |
+
+`--stdin` and `--stdout` (without `--check`) always exit 0 on success — they are pipe-style modes; the user already sees the output and shell `&&` chains shouldn't break on a transformation.
 
 ## Behavior guarantees
 

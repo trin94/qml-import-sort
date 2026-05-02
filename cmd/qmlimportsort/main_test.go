@@ -123,10 +123,24 @@ func TestCheckAndStdoutMutuallyExclusive(t *testing.T) {
 	}
 }
 
-func TestFormatFileInPlace(t *testing.T) {
+func TestFormatFileInPlace_ChangedExit1(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "a.qml")
 	writeFile(t, path, unformatted)
+
+	r := runCmd(t, []string{path}, "")
+	if r.code != 1 {
+		t.Errorf("code = %d, want 1; stderr=%q", r.code, r.stderr)
+	}
+	if got := readFile(t, path); got != formatted {
+		t.Errorf("file = %q, want %q", got, formatted)
+	}
+}
+
+func TestFormatFileInPlace_AlreadyCleanExit0(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.qml")
+	writeFile(t, path, formatted)
 
 	r := runCmd(t, []string{path}, "")
 	if r.code != 0 {
@@ -245,8 +259,8 @@ func TestWriteWalksDirectoryAndFormatsAll(t *testing.T) {
 	writeFile(t, sub, unformatted)
 
 	r := runCmd(t, []string{dir}, "")
-	if r.code != 0 {
-		t.Errorf("code = %d, want 0; stderr=%q", r.code, r.stderr)
+	if r.code != 1 {
+		t.Errorf("code = %d, want 1; stderr=%q", r.code, r.stderr)
 	}
 	if got := readFile(t, a); got != formatted {
 		t.Errorf("a.qml not formatted: %q", got)

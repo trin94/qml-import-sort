@@ -217,36 +217,42 @@ func runCheck(paths []string, stdout, stderr io.Writer, c *qml.Classifier) int {
 }
 
 func runWrite(paths []string, stderr io.Writer, c *qml.Classifier) int {
-	anyError := false
-	report := func(err error) {
-		if err == nil {
+	anyError, anyChanged := false, false
+	report := func(changed bool, err error) {
+		if err != nil {
+			reportErr(stderr, err)
+			anyError = true
 			return
 		}
-		reportErr(stderr, err)
-		anyError = true
+		if changed {
+			anyChanged = true
+		}
 	}
 	for _, root := range paths {
 		info, err := os.Stat(root)
 		if err != nil {
-			report(err)
+			report(false, err)
 			continue
 		}
 		if !info.IsDir() {
-			_, err := fs.FormatFile(root, c)
-			report(err)
+			changed, err := fs.FormatFile(root, c)
+			report(changed, err)
 			continue
 		}
 		walkErr := fs.WalkQMLFiles(root, func(p string) error {
-			_, err := fs.FormatFile(p, c)
-			report(err)
+			changed, err := fs.FormatFile(p, c)
+			report(changed, err)
 			return nil
 		})
 		if walkErr != nil {
-			report(walkErr)
+			report(false, walkErr)
 		}
 	}
 	if anyError {
 		return 2
+	}
+	if anyChanged {
+		return 1
 	}
 	return 0
 }
