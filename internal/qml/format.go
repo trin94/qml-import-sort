@@ -23,11 +23,11 @@ import (
 // the author left a blank line before the imports, the formatter
 // supplies one.
 //
-// The block is classified into five categories — pragma, qt,
-// third-party, first-party, relative — and emitted in that fixed
-// order. Within each, entries sort by normalized text in byte order
+// The block is classified into sections — pragma, qt, default, one
+// section per custom group, relative — and emitted in that order.
+// Within each, entries sort by normalized text in byte order
 // (case-sensitive, so "A" < "a"). Duplicates are removed; the first
-// occurrence wins. Empty categories emit nothing.
+// occurrence wins. Empty sections emit nothing.
 //
 // Comments inside the block are hoisted: they are collected in input
 // order and emitted as a single section between the preamble and the
@@ -90,7 +90,7 @@ func Format(src []byte, c *Classifier) ([]byte, error) {
 			return nil, err
 		}
 		hoisted = extractComments(tokens)
-		block = emitGroups(groupAndSort(tokens))
+		block = emitGroups(groupAndSort(tokens, len(c.groups)))
 	}
 
 	var out []string
@@ -191,14 +191,15 @@ const (
 	kindBlockComment
 	kindPragma
 	kindQt
-	kindThirdParty
-	kindFirstParty
+	kindDefault
+	kindCustom
 	kindRelative
 )
 
 type blockToken struct {
-	kind lineKind
-	text string // canonical form for normal lines; original (with leading whitespace) for block comments
+	kind  lineKind
+	group int    // custom-section index, meaningful only for kindCustom
+	text  string // canonical form for normal lines; original (with leading whitespace) for block comments
 }
 
 // extractComments returns the canonical text of every comment line in
@@ -215,30 +216,39 @@ func extractComments(tokens []blockToken) []string {
 	return out
 }
 
-// emitOrder fixes the sequence in which import categories appear in the
-// output. Comments are extracted separately by extractComments and
-// emitted as a hoisted section between preamble and the import groups.
-var emitOrder = []lineKind{kindPragma, kindQt, kindThirdParty, kindFirstParty, kindRelative}
-
-// groupAndSort buckets tokens by category, sorts each bucket by text in
-// byte order, removes byte-identical duplicates, and returns one slice
-// per category in emitOrder. Comments are dropped.
-func groupAndSort(tokens []blockToken) [][]blockToken {
-	groups := make(map[lineKind][]blockToken)
+// groupAndSort buckets tokens into emitted sections — pragma, qt,
+// default, one section per custom group, relative, in that order —
+// sorts each section by text in byte order, and removes byte-identical
+// duplicates. Comments are dropped; extractComments emits them as a
+// hoisted section between preamble and the import sections.
+func groupAndSort(tokens []blockToken, groupCount int) [][]blockToken {
+	sections := make([][]blockToken, groupCount+4)
+	sectionIndex := func(t blockToken) int {
+		switch t.kind {
+		case kindPragma:
+			return 0
+		case kindQt:
+			return 1
+		case kindDefault:
+			return 2
+		case kindCustom:
+			return 3 + t.group
+		default: // kindRelative
+			return 3 + groupCount
+		}
+	}
 	for _, t := range tokens {
 		if t.kind == kindLineComment || t.kind == kindBlockComment {
 			continue
 		}
-		groups[t.kind] = append(groups[t.kind], t)
+		i := sectionIndex(t)
+		sections[i] = append(sections[i], t)
 	}
-	result := make([][]blockToken, len(emitOrder))
-	for i, k := range emitOrder {
-		g := groups[k]
+	for i, g := range sections {
 		slices.SortFunc(g, func(a, b blockToken) int { return strings.Compare(a.text, b.text) })
-		g = slices.CompactFunc(g, func(a, b blockToken) bool { return a.text == b.text })
-		result[i] = g
+		sections[i] = slices.CompactFunc(g, func(a, b blockToken) bool { return a.text == b.text })
 	}
-	return result
+	return sections
 }
 
 // emitGroups flattens grouped tokens into output lines, inserting one
@@ -327,12 +337,10 @@ func classifyImport(line string, c *Classifier) (blockToken, error) {
 	}
 
 	matchText := strings.Join(tokens[1:], " ")
-	for _, p := range c.firstPartyPrefixes {
-		if strings.HasPrefix(matchText, p) {
-			return blockToken{kind: kindFirstParty, text: canonical}, nil
-		}
+	if g, ok := c.matchGroup(matchText); ok {
+		return blockToken{kind: kindCustom, group: g, text: canonical}, nil
 	}
-	return blockToken{kind: kindThirdParty, text: canonical}, nil
+	return blockToken{kind: kindDefault, text: canonical}, nil
 }
 
 // splitImportTokens splits a pragma or import line into whitespace-
