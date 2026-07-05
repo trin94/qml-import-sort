@@ -19,41 +19,98 @@ A tool to organize and sort QML import statements.
 
 ## Example
 
-Imports are grouped into pragmas, Qt, third-party, first-party (opt-in), and relative — sorted and de-duplicated within each group, separated by a blank line.
+Imports are grouped into pragmas, Qt, default, custom sections (opt-in), and relative — sorted and de-duplicated within each group, separated by a blank line.
 
-Before:
+Given this file:
 
 ```qml
 // SPDX-FileCopyrightText: Jane Doe
 //
 // SPDX-License-Identifier: MIT
-import "../components"
-import MyModule
 import QtQuick.Controls
+import "../components"
+import MyApp.Views
 import org.kde.kirigami as Kirigami
 import QtQuick
-pragma Singleton
-QtObject {}
+import Company.Widgets 1.2
+import MyApp.Backend
+import QtQuick
+pragma ComponentBehavior: Bound
+import Qt.labs.settings
+
+Item {}
 ```
 
-After:
+`qmlimportsort Main.qml` applies the default grouping — everything that is not Qt or relative shares one section:
 
 ```qml
 // SPDX-FileCopyrightText: Jane Doe
 //
 // SPDX-License-Identifier: MIT
 
-pragma Singleton
+pragma ComponentBehavior: Bound
 
+import Qt.labs.settings
 import QtQuick
 import QtQuick.Controls
 
-import MyModule
+import Company.Widgets 1.2
+import MyApp.Backend
+import MyApp.Views
 import org.kde.kirigami as Kirigami
 
 import "../components"
 
-QtObject {}
+Item {}
+```
+
+`qmlimportsort --group MyApp. Main.qml` gives the project's own modules their own section:
+
+```qml
+// SPDX-FileCopyrightText: Jane Doe
+//
+// SPDX-License-Identifier: MIT
+
+pragma ComponentBehavior: Bound
+
+import Qt.labs.settings
+import QtQuick
+import QtQuick.Controls
+
+import Company.Widgets 1.2
+import org.kde.kirigami as Kirigami
+
+import MyApp.Backend
+import MyApp.Views
+
+import "../components"
+
+Item {}
+```
+
+`qmlimportsort --group Company. --group MyApp. Main.qml` splits further — one section per namespace, in flag order:
+
+```qml
+// SPDX-FileCopyrightText: Jane Doe
+//
+// SPDX-License-Identifier: MIT
+
+pragma ComponentBehavior: Bound
+
+import Qt.labs.settings
+import QtQuick
+import QtQuick.Controls
+
+import org.kde.kirigami as Kirigami
+
+import Company.Widgets 1.2
+
+import MyApp.Backend
+import MyApp.Views
+
+import "../components"
+
+Item {}
 ```
 
 ## Usage
@@ -72,8 +129,8 @@ qmlimportsort --stdout Main.qml
 # Pipe through stdin/stdout
 cat Main.qml | qmlimportsort --stdin
 
-# Mark imports owned by your project as first-party (repeatable)
-qmlimportsort --first-party-prefix=io.github.mpvqc. src/
+# Give your project's modules their own section (repeatable, comma-separated)
+qmlimportsort --group io.github.mpvqc. src/
 ```
 
 Run `qmlimportsort --help` for the full flag list.
