@@ -40,6 +40,29 @@ qmlimportsort --group io.github.mpvqc. src/
 
 Run `qmlimportsort --help` for the full flag list.
 
+## pre-commit
+
+The tool can run as a [pre-commit](https://pre-commit.com) or [prek](https://prek.j178.dev) hook.
+Add this to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: "https://github.com/trin94/qml-import-sort"
+    rev: "v0.4.0"
+    hooks:
+      - id: "qml-import-sort"
+```
+
+Go does not need to be installed. Both frameworks download the Go toolchain on demand
+and build the hook once per `rev`.
+
+Pass `--group` prefixes via `args`:
+
+```yaml
+      - id: "qml-import-sort"
+        args: ["--group", "io.github.mpvqc."]
+```
+
 ## Examples
 
 Imports are grouped into pragmas, Qt, default, custom sections (opt-in), and relative — sorted and de-duplicated within each group, separated by a blank line.

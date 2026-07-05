@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: Elias Mueller
+#
+# SPDX-License-Identifier: MIT
+
+- id: qml-import-sort
+  name: sort QML imports
+  description: Organize and sort QML import statements
+  entry: qmlimportsort
+  language: golang
+  files: '\.qml$'
