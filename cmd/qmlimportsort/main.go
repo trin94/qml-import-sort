@@ -98,7 +98,14 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 
 	groups := make([][]string, 0, len(groupFlags))
 	for _, g := range groupFlags {
-		groups = append(groups, strings.Split(g, ","))
+		prefixes := strings.Split(g, ",")
+		for _, p := range prefixes {
+			if strings.TrimSpace(p) == "" {
+				reportErr(stderr, fmt.Errorf("--group %q: empty prefix (stray comma?)", g))
+				return 2
+			}
+		}
+		groups = append(groups, prefixes)
 	}
 	classifier, err := qml.Compile(qml.Options{Groups: groups})
 	if err != nil {
