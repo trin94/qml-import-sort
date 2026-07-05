@@ -24,13 +24,40 @@ internal/
 
 ## Why `Compile` is separate from `Format`
 
-The CLI walks many files in one invocation and validates options once. `qml.Compile` does the validation and returns a `*Classifier`; `qml.Format` trusts its input. The CLI calls `Compile` at flag-parse time and treats a `Compile` error as a usage error (exit 2), so a bad `--first-party-prefix` fails before any file is touched.
+The CLI walks many files in one invocation and validates options once. `qml.Compile` does the validation and returns a `*Classifier`; `qml.Format` trusts its input. The CLI calls `Compile` at flag-parse time and treats a `Compile` error as a usage error (exit 2), so a bad `--group` fails before any file is touched.
 
 The full API surface and behavior contract live in the godoc on the `qml` and `fs` packages.
 
+## Import classification and grouping
+
+The output order of the import block is fixed: pragmas, Qt, default, custom `--group` sections (in flag order), relative. Only the custom sections are configurable.
+
+Classification does not depend on flag order — it is decided per import:
+
+- **Relative** matches by syntax: the import target is a quoted path.
+- **Qt** matches modules shipped with Qt: names starting with `Qt` followed by an uppercase letter, digit, or dot (`QtQuick`, `Qt.labs.settings`, `Qt5Compat.GraphicalEffects`), plus the base language module `QML`.
+- **Custom sections** match by the longest matching prefix across *all* `--group` flags. A prefix is a literal match against the whitespace-normalized text after `import`; a trailing `.` creates a namespace boundary (`io.github.mpvqc.` matches `io.github.mpvqc.Foo` but not `io.github.mpvqcExternal`). Prefixes are trimmed of surrounding whitespace.
+- **Default** takes whatever is left.
+
+Validation happens in `qml.Compile`, so a bad group definition is a usage error (exit 2) before any file is touched:
+
+- empty prefix, or prefix starting with `.`
+- Qt-reserved prefix: starting with `Qt` or `qt`, equal to `QML`, or starting with `QML.` — Qt-owned names always stay in the Qt section
+- the same prefix listed twice anywhere
+
+Overlapping (non-identical) prefixes are legal — the longest match wins, and because exact duplicates are rejected there are no ties.
+
+The repeatable flag maps 1:1 onto a list in the planned YAML/TOML config file:
+
+```yaml
+groups:
+  - prefixes: [Company.Shared., Company.Widgets.]
+  - prefixes: [MyApp.]
+```
+
 ## How the CLI modes compose
 
-Each flag mode in [CLI.md](CLI.md) maps to a small combination of `fs` primitives. `main` contains no formatting logic — only dispatch. It builds a `qml.Options` from `--first-party-prefix` flags, calls `qml.Compile` once, and threads the resulting `*qml.Classifier` through every `fs` call.
+Each flag mode in [CLI.md](CLI.md) maps to a small combination of `fs` primitives. `main` contains no formatting logic — only dispatch. It builds a `qml.Options` from `--group` flags, calls `qml.Compile` once, and threads the resulting `*qml.Classifier` through every `fs` call.
 
 | Mode                            | Composition                                                                                               |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------- |
