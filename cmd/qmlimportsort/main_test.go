@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -236,6 +237,18 @@ func TestBadGroupPrefixExit2(t *testing.T) {
 	}
 	if !strings.Contains(r.stderr, "QtFoo") {
 		t.Errorf("stderr should name offending prefix; got %q", r.stderr)
+	}
+}
+
+func TestGroupEmptyPrefixNamesFlagValue(t *testing.T) {
+	for _, value := range []string{"", ",", "MyApp.,", "a,,b", "   "} {
+		r := runCmd(t, []string{"--group=" + value, "--stdin"}, formatted)
+		if r.code != 2 {
+			t.Errorf("--group=%q: code = %d, want 2", value, r.code)
+		}
+		if !strings.Contains(r.stderr, fmt.Sprintf("%q", value)) {
+			t.Errorf("--group=%q: stderr should name the flag value; got %q", value, r.stderr)
+		}
 	}
 }
 
