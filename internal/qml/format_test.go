@@ -1396,12 +1396,12 @@ func TestFormatIntegration(t *testing.T) {
 	})
 }
 
-func TestFormatFirstPartyPrefixes(t *testing.T) {
+func TestFormatGroups(t *testing.T) {
 	runFormatCases(t, []formatCase{
 		{
-			name:       "first-party prefix carves a bare identifier out of third-party",
+			name:       "a group carves its imports out of default into a section after it",
 			lineEnding: "\n",
-			options:    Options{FirstPartyPrefixes: []string{"MyLib"}},
+			options:    Options{Groups: [][]string{{"MyLib"}}},
 			input: []string{
 				"import MyLib",
 				"import QtQuick",
@@ -1419,29 +1419,100 @@ func TestFormatFirstPartyPrefixes(t *testing.T) {
 			},
 		},
 		{
-			name:       "first-party prefix matches a dotted name",
+			name:       "custom sections sit between default and relative",
 			lineEnding: "\n",
-			options:    Options{FirstPartyPrefixes: []string{"io.github.mpvqc."}},
+			options:    Options{Groups: [][]string{{"MyApp."}}},
 			input: []string{
-				"import io.github.mpvqc.Foo",
-				"import io.github.other",
+				`import "./components"`,
+				"import MyApp.Views",
+				"import PlainModule",
+				"import QtQuick",
 				"",
 				"Rectangle {",
 				"}",
 			},
 			expected: []string{
-				"import io.github.other",
+				"import QtQuick",
 				"",
-				"import io.github.mpvqc.Foo",
+				"import PlainModule",
+				"",
+				"import MyApp.Views",
+				"",
+				`import "./components"`,
 				"",
 				"Rectangle {",
 				"}",
 			},
 		},
 		{
-			name:       "trailing dot in the prefix creates a boundary that does not match siblings",
+			name:       "prefixes in one group share a single section",
 			lineEnding: "\n",
-			options:    Options{FirstPartyPrefixes: []string{"io.github.mpvqc."}},
+			options:    Options{Groups: [][]string{{"Company.Shared.", "Company.Widgets."}}},
+			input: []string{
+				"import Company.Widgets.Buttons",
+				"import Company.Shared.Logging",
+				"import PlainModule",
+				"",
+				"Rectangle {",
+				"}",
+			},
+			expected: []string{
+				"import PlainModule",
+				"",
+				"import Company.Shared.Logging",
+				"import Company.Widgets.Buttons",
+				"",
+				"Rectangle {",
+				"}",
+			},
+		},
+		{
+			name:       "separate groups emit separate sections in group order",
+			lineEnding: "\n",
+			options:    Options{Groups: [][]string{{"Beta."}, {"Alpha."}}},
+			input: []string{
+				"import Alpha.One",
+				"import Beta.One",
+				"import QtQuick",
+				"",
+				"Rectangle {",
+				"}",
+			},
+			expected: []string{
+				"import QtQuick",
+				"",
+				"import Beta.One",
+				"",
+				"import Alpha.One",
+				"",
+				"Rectangle {",
+				"}",
+			},
+		},
+		{
+			name:       "longest matching prefix wins regardless of group order",
+			lineEnding: "\n",
+			options:    Options{Groups: [][]string{{"Foo."}, {"Foo.Bar."}}},
+			input: []string{
+				"import Foo.Bar.X",
+				"import Foo.Y",
+				"",
+				"Rectangle {",
+				"}",
+			},
+			expected: []string{
+				"import Foo.Y",
+				"",
+				"import Foo.Bar.X",
+				"",
+				"Rectangle {",
+				"}",
+			},
+		},
+		{
+			name:       "trailing dot in a prefix creates a boundary that does not match siblings",
+			lineEnding: "\n",
+			options:    Options{Groups: [][]string{{"io.github.mpvqc."}}},
 			input: []string{
 				"import io.github.mpvqc.Foo",
 				"import io.github.mpvqcExternal.Bar",
@@ -1459,7 +1530,27 @@ func TestFormatFirstPartyPrefixes(t *testing.T) {
 			},
 		},
 		{
-			name:       "default options put every non-Qt non-relative import into a single third-party group",
+			name:       "group with no matching imports emits nothing",
+			lineEnding: "\n",
+			options:    Options{Groups: [][]string{{"Unused."}}},
+			input: []string{
+				"import PlainModule",
+				"import QtQuick",
+				"",
+				"Rectangle {",
+				"}",
+			},
+			expected: []string{
+				"import QtQuick",
+				"",
+				"import PlainModule",
+				"",
+				"Rectangle {",
+				"}",
+			},
+		},
+		{
+			name:       "default options put every non-Qt non-relative import into a single default section",
 			lineEnding: "\n",
 			input: []string{
 				"import QtQuick",
@@ -1480,31 +1571,9 @@ func TestFormatFirstPartyPrefixes(t *testing.T) {
 			},
 		},
 		{
-			name:       "multiple first-party prefixes are all honored",
+			name:       "group prefix matches imports with a trailing '//' comment",
 			lineEnding: "\n",
-			options:    Options{FirstPartyPrefixes: []string{"Alpha", "Beta"}},
-			input: []string{
-				"import Alpha",
-				"import Beta",
-				"import Gamma",
-				"",
-				"Rectangle {",
-				"}",
-			},
-			expected: []string{
-				"import Gamma",
-				"",
-				"import Alpha",
-				"import Beta",
-				"",
-				"Rectangle {",
-				"}",
-			},
-		},
-		{
-			name:       "first-party prefix matches imports with a trailing '//' comment",
-			lineEnding: "\n",
-			options:    Options{FirstPartyPrefixes: []string{"MyLib"}},
+			options:    Options{Groups: [][]string{{"MyLib"}}},
 			input: []string{
 				"import MyLib // project internal library",
 				"import PlainModule",
@@ -1524,7 +1593,7 @@ func TestFormatFirstPartyPrefixes(t *testing.T) {
 		{
 			name:       "leading and trailing whitespace in prefixes is trimmed before use",
 			lineEnding: "\n",
-			options:    Options{FirstPartyPrefixes: []string{"  MyLib  "}},
+			options:    Options{Groups: [][]string{{"  MyLib  "}}},
 			input: []string{
 				"import MyLib",
 				"import PlainModule",
@@ -1542,9 +1611,9 @@ func TestFormatFirstPartyPrefixes(t *testing.T) {
 			},
 		},
 		{
-			name:       "first-party prefix matches against whitespace-normalized import text",
+			name:       "group prefix matches against whitespace-normalized import text",
 			lineEnding: "\n",
-			options:    Options{FirstPartyPrefixes: []string{"MyLib 1.0"}},
+			options:    Options{Groups: [][]string{{"MyLib 1.0"}}},
 			input: []string{
 				"import  MyLib   1.0",
 				"import OtherModule",
@@ -1562,9 +1631,9 @@ func TestFormatFirstPartyPrefixes(t *testing.T) {
 			},
 		},
 		{
-			name:       "first-party imports are sorted and deduplicated within their group",
+			name:       "group imports are sorted and deduplicated within their section",
 			lineEnding: "\n",
-			options:    Options{FirstPartyPrefixes: []string{"io.github.mpvqc."}},
+			options:    Options{Groups: [][]string{{"io.github.mpvqc."}}},
 			input: []string{
 				"import QtQuick",
 				"import io.github.mpvqc.Charlie",

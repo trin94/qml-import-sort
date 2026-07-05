@@ -229,8 +229,8 @@ func TestMissingPathIsExit2(t *testing.T) {
 	}
 }
 
-func TestBadPrefixExit2(t *testing.T) {
-	r := runCmd(t, []string{"--first-party-prefix=QtFoo", "--stdin"}, formatted)
+func TestBadGroupPrefixExit2(t *testing.T) {
+	r := runCmd(t, []string{"--group=QtFoo", "--stdin"}, formatted)
 	if r.code != 2 {
 		t.Errorf("code = %d, want 2", r.code)
 	}
@@ -239,10 +239,34 @@ func TestBadPrefixExit2(t *testing.T) {
 	}
 }
 
-func TestFirstPartyPrefixIsApplied(t *testing.T) {
+func TestGroupIsApplied(t *testing.T) {
 	in := "import QtQuick\nimport com.acme.widgets\nimport io.github.someone\n\nRectangle {}\n"
 	want := "import QtQuick\n\nimport io.github.someone\n\nimport com.acme.widgets\n\nRectangle {}\n"
-	r := runCmd(t, []string{"--first-party-prefix=com.acme.", "--stdin"}, in)
+	r := runCmd(t, []string{"--group=com.acme.", "--stdin"}, in)
+	if r.code != 0 {
+		t.Errorf("code = %d, want 0; stderr=%q", r.code, r.stderr)
+	}
+	if r.stdout != want {
+		t.Errorf("stdout =\n%q\nwant\n%q", r.stdout, want)
+	}
+}
+
+func TestGroupSectionsFollowFlagOrder(t *testing.T) {
+	in := "import com.a.X\nimport com.b.X\nimport QtQuick\n\nRectangle {}\n"
+	want := "import QtQuick\n\nimport com.b.X\n\nimport com.a.X\n\nRectangle {}\n"
+	r := runCmd(t, []string{"--group=com.b.", "--group=com.a.", "--stdin"}, in)
+	if r.code != 0 {
+		t.Errorf("code = %d, want 0; stderr=%q", r.code, r.stderr)
+	}
+	if r.stdout != want {
+		t.Errorf("stdout =\n%q\nwant\n%q", r.stdout, want)
+	}
+}
+
+func TestGroupCommaSeparatedPrefixesShareSection(t *testing.T) {
+	in := "import com.b.X\nimport com.a.X\nimport QtQuick\n\nRectangle {}\n"
+	want := "import QtQuick\n\nimport com.a.X\nimport com.b.X\n\nRectangle {}\n"
+	r := runCmd(t, []string{"--group=com.a.,com.b.", "--stdin"}, in)
 	if r.code != 0 {
 		t.Errorf("code = %d, want 0; stderr=%q", r.code, r.stderr)
 	}

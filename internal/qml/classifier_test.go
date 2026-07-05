@@ -16,68 +16,80 @@ func TestCompile(t *testing.T) {
 		wantErrContains string
 	}{
 		{
+			name: "no groups is valid",
+			opts: Options{},
+		},
+		{
 			name:            "empty prefix is rejected",
-			opts:            Options{FirstPartyPrefixes: []string{""}},
+			opts:            Options{Groups: [][]string{{""}}},
 			wantErrContains: "empty prefix",
 		},
 		{
 			name:            "all-whitespace prefix is trimmed to empty and rejected",
-			opts:            Options{FirstPartyPrefixes: []string{"   "}},
+			opts:            Options{Groups: [][]string{{"   "}}},
 			wantErrContains: "empty prefix",
 		},
 		{
+			name:            "group without prefixes is rejected",
+			opts:            Options{Groups: [][]string{{}}},
+			wantErrContains: "no prefixes",
+		},
+		{
 			name:            "prefix starting with '.' is rejected",
-			opts:            Options{FirstPartyPrefixes: []string{".foo"}},
+			opts:            Options{Groups: [][]string{{".foo"}}},
 			wantErrContains: `".foo"`,
 		},
 		{
-			name:            "prefix equal to 'pragma' is rejected",
-			opts:            Options{FirstPartyPrefixes: []string{"pragma"}},
-			wantErrContains: `"pragma"`,
-		},
-		{
 			name:            "prefix starting with 'Qt' is rejected",
-			opts:            Options{FirstPartyPrefixes: []string{"QtCustom"}},
+			opts:            Options{Groups: [][]string{{"QtCustom"}}},
 			wantErrContains: `"QtCustom"`,
 		},
 		{
 			name:            "prefix starting with 'qt' is rejected",
-			opts:            Options{FirstPartyPrefixes: []string{"qtcustom"}},
+			opts:            Options{Groups: [][]string{{"qtcustom"}}},
 			wantErrContains: `"qtcustom"`,
 		},
 		{
-			name:            "prefix with surrounding whitespace is trimmed before the Qt-start check",
-			opts:            Options{FirstPartyPrefixes: []string{"  QtCustom  "}},
-			wantErrContains: `"QtCustom"`,
-		},
-		{
 			name:            "prefix equal to 'QML' is rejected",
-			opts:            Options{FirstPartyPrefixes: []string{"QML"}},
+			opts:            Options{Groups: [][]string{{"QML"}}},
 			wantErrContains: `"QML"`,
 		},
 		{
 			name:            "prefix starting with 'QML.' is rejected",
-			opts:            Options{FirstPartyPrefixes: []string{"QML.Foo"}},
+			opts:            Options{Groups: [][]string{{"QML.Foo"}}},
 			wantErrContains: `"QML.Foo"`,
 		},
 		{
 			name: "prefix merely starting with QML is accepted",
-			opts: Options{FirstPartyPrefixes: []string{"QMLFoo"}},
+			opts: Options{Groups: [][]string{{"QMLFoo"}}},
 		},
 		{
-			name:            "duplicate prefix is rejected and names the prefix",
-			opts:            Options{FirstPartyPrefixes: []string{"Foo", "Foo"}},
+			name:            "prefix with surrounding whitespace is trimmed before the Qt-start check",
+			opts:            Options{Groups: [][]string{{"  QtCustom  "}}},
+			wantErrContains: `"QtCustom"`,
+		},
+		{
+			name:            "duplicate prefix within a group is rejected",
+			opts:            Options{Groups: [][]string{{"Foo", "Foo"}}},
 			wantErrContains: `"Foo"`,
 		},
 		{
-			name:            "prefix-of-prefix overlap is rejected and names both (shorter first)",
-			opts:            Options{FirstPartyPrefixes: []string{"Foo", "Foo.Bar"}},
-			wantErrContains: `"Foo.Bar"`,
+			name:            "duplicate prefix across groups is rejected",
+			opts:            Options{Groups: [][]string{{"Foo"}, {"Foo"}}},
+			wantErrContains: `"Foo"`,
 		},
 		{
-			name:            "prefix-of-prefix overlap is detected regardless of order (longer first)",
-			opts:            Options{FirstPartyPrefixes: []string{"Foo.Bar", "Foo"}},
-			wantErrContains: `"Foo.Bar"`,
+			name:            "duplicates are detected after trimming",
+			opts:            Options{Groups: [][]string{{"Foo"}, {"  Foo  "}}},
+			wantErrContains: `"Foo"`,
+		},
+		{
+			name: "overlapping prefixes in one group are accepted",
+			opts: Options{Groups: [][]string{{"Foo.", "Foo.Bar."}}},
+		},
+		{
+			name: "overlapping prefixes across groups are accepted",
+			opts: Options{Groups: [][]string{{"Foo."}, {"Foo.Bar."}}},
 		},
 	}
 
