@@ -1286,6 +1286,70 @@ func TestFormatErrors(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name:       "import with non-ASCII module name returns an error",
+			lineEnding: "\n",
+			input: []string{
+				"import Café.Views",
+				"",
+				"Rectangle {",
+				"}",
+			},
+			wantErr:         true,
+			wantErrContains: "invalid import name",
+		},
+		{
+			name:       "unrecognized line inside the import block returns an error",
+			lineEnding: "\n",
+			input: []string{
+				"import QtQuick",
+				"foo bar",
+				"import QtQml",
+				"",
+				"Rectangle {",
+				"}",
+			},
+			wantErr:         true,
+			wantErrContains: "unrecognized line",
+		},
+		{
+			name:       "unterminated quoted path returns an error",
+			lineEnding: "\n",
+			input: []string{
+				`import "foo`,
+				"",
+				"Rectangle {",
+				"}",
+			},
+			wantErr:         true,
+			wantErrContains: "unterminated",
+		},
+		{
+			name:       "pragma keyword without a name returns an error",
+			lineEnding: "\n",
+			input: []string{
+				"pragma ",
+				"import QtQuick",
+				"",
+				"Rectangle {",
+				"}",
+			},
+			wantErr:         true,
+			wantErrContains: "pragma without name",
+		},
+		{
+			name:       "import keyword without a name returns an error",
+			lineEnding: "\n",
+			input: []string{
+				"import ",
+				"import QtQuick",
+				"",
+				"Rectangle {",
+				"}",
+			},
+			wantErr:         true,
+			wantErrContains: "import without name",
+		},
 	})
 }
 

@@ -16,6 +16,9 @@ import (
 const (
 	unformatted = "import QtQuick\nimport QtQml\n\nRectangle {}\n"
 	formatted   = "import QtQml\nimport QtQuick\n\nRectangle {}\n"
+
+	groupInput     = "import QtQuick\nimport com.acme.widgets\nimport io.github.someone\n\nRectangle {}\n"
+	groupFormatted = "import QtQuick\n\nimport io.github.someone\n\nimport com.acme.widgets\n\nRectangle {}\n"
 )
 
 func writeFile(t *testing.T, path, content string) {
@@ -253,14 +256,64 @@ func TestGroupEmptyPrefixNamesFlagValue(t *testing.T) {
 }
 
 func TestGroupIsApplied(t *testing.T) {
-	in := "import QtQuick\nimport com.acme.widgets\nimport io.github.someone\n\nRectangle {}\n"
-	want := "import QtQuick\n\nimport io.github.someone\n\nimport com.acme.widgets\n\nRectangle {}\n"
-	r := runCmd(t, []string{"--group=com.acme.", "--stdin"}, in)
+	r := runCmd(t, []string{"--group=com.acme.", "--stdin"}, groupInput)
 	if r.code != 0 {
 		t.Errorf("code = %d, want 0; stderr=%q", r.code, r.stderr)
 	}
-	if r.stdout != want {
-		t.Errorf("stdout =\n%q\nwant\n%q", r.stdout, want)
+	if r.stdout != groupFormatted {
+		t.Errorf("stdout =\n%q\nwant\n%q", r.stdout, groupFormatted)
+	}
+}
+
+func TestGroupAppliesToDirectoryWrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sub", "a.qml")
+	writeFile(t, path, groupInput)
+
+	r := runCmd(t, []string{"--group=com.acme.", dir}, "")
+	if r.code != 1 {
+		t.Errorf("code = %d, want 1; stderr=%q", r.code, r.stderr)
+	}
+	if got := readFile(t, path); got != groupFormatted {
+		t.Errorf("file = %q, want %q", got, groupFormatted)
+	}
+}
+
+func TestGroupAppliesToCheckMode(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.qml")
+	defaultClean := "import QtQuick\n\nimport com.acme.widgets\nimport io.github.someone\n\nRectangle {}\n"
+	writeFile(t, path, defaultClean)
+
+	if r := runCmd(t, []string{"--check", path}, ""); r.code != 0 {
+		t.Errorf("without --group: code = %d, want 0; stderr=%q", r.code, r.stderr)
+	}
+	r := runCmd(t, []string{"--check", "--group=com.acme.", path}, "")
+	if r.code != 1 {
+		t.Errorf("with --group: code = %d, want 1; stderr=%q", r.code, r.stderr)
+	}
+	if !strings.Contains(r.stdout, path) {
+		t.Errorf("stdout should list %s; got %q", path, r.stdout)
+	}
+	if got := readFile(t, path); got != defaultClean {
+		t.Errorf("--check modified file: %q", got)
+	}
+}
+
+func TestGroupAppliesToStdoutMode(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.qml")
+	writeFile(t, path, groupInput)
+
+	r := runCmd(t, []string{"--stdout", "--group=com.acme.", path}, "")
+	if r.code != 0 {
+		t.Errorf("code = %d, want 0; stderr=%q", r.code, r.stderr)
+	}
+	if r.stdout != groupFormatted {
+		t.Errorf("stdout =\n%q\nwant\n%q", r.stdout, groupFormatted)
+	}
+	if got := readFile(t, path); got != groupInput {
+		t.Errorf("--stdout modified file: %q", got)
 	}
 }
 
