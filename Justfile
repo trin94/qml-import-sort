@@ -8,8 +8,8 @@ alias fmt := format
     just --list --unsorted
 
 init:
-    go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
-    go install github.com/securego/gosec/v2/cmd/gosec@v2.22.10
+    go install honnef.co/go/tools/cmd/staticcheck@2026.1
+    go install github.com/securego/gosec/v2/cmd/gosec@v2.27.1
 
 format:
     uv run prek --config .config/prek.toml run --all-files
@@ -27,11 +27,11 @@ lint:
 
 # Run all tests
 [group('dev')]
-@test *FLAGS:
+test *FLAGS:
     go clean -testcache
     go test ./... {{ FLAGS }}
 
 # Build the qmlimportsort binary
 [group('build')]
-@build:
+build:
     go build -o qmlimportsort ./cmd/qmlimportsort
