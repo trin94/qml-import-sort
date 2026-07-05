@@ -32,8 +32,10 @@ FLAGS:
                             Single file only.
    --stdin                  Read from stdin, write to stdout. Mutually
                             exclusive with positional paths.
-   --first-party-prefix     Prefix that marks a non-Qt, non-relative
-                            import as first-party. Repeatable.
+   --group                  Comma-separated prefixes forming one custom
+                            import section. Repeatable; sections appear
+                            between the default and relative sections
+                            in flag order.
    --version                Print version, exit 0.
    --help, -h               Print this help, exit 0.
 `
@@ -55,13 +57,13 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	var (
 		check, stdoutMode, stdinMode bool
 		showVersion, showHelp, showH bool
-		prefixes                     stringList
+		groupFlags                   stringList
 	)
 	flags.BoolVar(&check, "check", false, "")
 	flags.BoolVar(&check, "c", false, "")
 	flags.BoolVar(&stdoutMode, "stdout", false, "")
 	flags.BoolVar(&stdinMode, "stdin", false, "")
-	flags.Var(&prefixes, "first-party-prefix", "")
+	flags.Var(&groupFlags, "group", "")
 	flags.BoolVar(&showVersion, "version", false, "")
 	flags.BoolVar(&showHelp, "help", false, "")
 	flags.BoolVar(&showH, "h", false, "")
@@ -94,7 +96,11 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	classifier, err := qml.Compile(qml.Options{FirstPartyPrefixes: prefixes})
+	groups := make([][]string, 0, len(groupFlags))
+	for _, g := range groupFlags {
+		groups = append(groups, strings.Split(g, ","))
+	}
+	classifier, err := qml.Compile(qml.Options{Groups: groups})
 	if err != nil {
 		reportErr(stderr, err)
 		return 2

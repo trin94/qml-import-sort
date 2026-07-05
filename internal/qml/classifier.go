@@ -12,22 +12,19 @@ import (
 
 // Options configure Format's classifier. The zero value preserves
 // Format's default behavior: every non-Qt, non-relative import lands
-// in a single third-party group.
+// in the single default section.
 type Options struct {
 
-	// FirstPartyPrefixes carves a first-party group out of the default
-	// third-party set. The classifier checks these rules top-to-bottom;
-	// the first match wins:
+	// Groups declares the custom sections emitted between the default
+	// and relative sections, in order; each inner slice holds the
+	// prefixes of one section. The classifier decides membership per
+	// import:
 	//
 	//  1. pragma keyword                → pragma
 	//  2. Qt[A-Z0-9.] pattern or QML    → qt
 	//  3. text starts with " or '       → relative
-	//  4. FirstPartyPrefixes match      → first-party
-	//  5. otherwise (valid identifier)  → third-party
-	//
-	// There is no dotted-vs-bare heuristic: a bare identifier and a
-	// dotted path are both third-party by default, and the caller
-	// decides which (if any) become first-party.
+	//  4. longest matching prefix       → that prefix's group
+	//  5. otherwise (valid identifier)  → default
 	//
 	// A prefix is a literal byte-level string match against the import
 	// text (the content after "import " with leading/trailing
@@ -35,74 +32,85 @@ type Options struct {
 	// a trailing "." to match only dotted subpaths — "io.github.mpvqc."
 	// matches "io.github.mpvqc.Foo" but not "io.github.mpvqcExternal".
 	//
+	// Matching uses the longest prefix across all groups, so the order
+	// of Groups affects only where sections appear, never which group
+	// an import belongs to. Overlapping prefixes are legal; exact
+	// duplicates are not, so there are no ties.
+	//
 	// Prefixes are trimmed of leading and trailing whitespace before
-	// validation and matching. Trim happens before every rule below,
-	// so "   " is rejected as empty and "  Qt  " is rejected for
-	// starting with "Qt".
+	// validation and matching.
 	//
-	// Format validates each prefix at entry and returns an error
-	// naming the offending prefix(es) if any rule is violated:
+	// Compile validates each group and returns an error naming the
+	// offending prefix if any rule is violated:
 	//
-	//   - empty (after trimming)
-	//   - starts with "."
-	//   - starts with "Qt" or "qt" (Qt is its own category)
-	//   - equals "QML" or starts with "QML." (the QML base module
-	//     belongs to the Qt category)
-	//   - equals "pragma" (pragma is its own category)
-	//   - any two prefixes overlap — identical, or one is a prefix of
-	//     the other (reported as "duplicate" or "overlapping"
-	//     respectively)
-	FirstPartyPrefixes []string
+	//   - a group without prefixes
+	//   - empty prefix (after trimming)
+	//   - prefix starting with "."
+	//   - prefix starting with "Qt" or "qt", equal to "QML", or
+	//     starting with "QML." (Qt-owned names always stay in the Qt
+	//     section)
+	//   - the same prefix listed twice anywhere
+	Groups [][]string
 }
 
 // Classifier is a compiled, validated form of Options. Build one with
-// Compile (or MustCompile) and pass it to Format; a nil *Classifier is
-// equivalent to one compiled from Options{}, i.e. defaults only.
+// Compile and pass it to Format; a nil *Classifier is equivalent to one
+// compiled from Options{}, i.e. defaults only.
 //
 // Compile once and reuse across files. The returned Classifier is
 // immutable and safe for concurrent use.
 type Classifier struct {
-	firstPartyPrefixes []string
+	groups [][]string
 }
 
 // Compile validates opts and returns a Classifier suitable for Format.
-// See Options.FirstPartyPrefixes for the validation rules; Compile
-// returns an error naming the offending prefix(es) when any rule is
-// violated.
+// See Options.Groups for the validation rules; Compile returns an
+// error naming the offending prefix when any rule is violated.
 func Compile(opts Options) (*Classifier, error) {
-	prefixes := make([]string, 0, len(opts.FirstPartyPrefixes))
-	for _, raw := range opts.FirstPartyPrefixes {
-		p := strings.TrimSpace(raw)
-		if p == "" {
-			return nil, errors.New("qml.Compile: empty prefix")
+	groups := make([][]string, 0, len(opts.Groups))
+	seen := make(map[string]bool)
+	for i, rawGroup := range opts.Groups {
+		if len(rawGroup) == 0 {
+			return nil, fmt.Errorf("qml.Compile: group %d has no prefixes", i+1)
 		}
-		if strings.HasPrefix(p, ".") {
-			return nil, fmt.Errorf("qml.Compile: prefix %q starts with %q", p, ".")
+		prefixes := make([]string, 0, len(rawGroup))
+		for _, raw := range rawGroup {
+			p := strings.TrimSpace(raw)
+			if p == "" {
+				return nil, errors.New("qml.Compile: empty prefix")
+			}
+			if strings.HasPrefix(p, ".") {
+				return nil, fmt.Errorf("qml.Compile: prefix %q starts with %q", p, ".")
+			}
+			if isQtReservedPrefix(p) {
+				return nil, fmt.Errorf("qml.Compile: prefix %q is reserved (Qt-owned names always stay in the Qt section)", p)
+			}
+			if seen[p] {
+				return nil, fmt.Errorf("qml.Compile: duplicate prefix %q", p)
+			}
+			seen[p] = true
+			prefixes = append(prefixes, p)
 		}
-		if strings.HasPrefix(p, "Qt") || strings.HasPrefix(p, "qt") {
-			return nil, fmt.Errorf("qml.Compile: prefix %q starts with Qt/qt (Qt is its own category)", p)
-		}
-		if p == "QML" || strings.HasPrefix(p, "QML.") {
-			return nil, fmt.Errorf("qml.Compile: prefix %q is reserved (the QML base module belongs to the Qt category)", p)
-		}
-		if p == "pragma" {
-			return nil, fmt.Errorf("qml.Compile: prefix %q is reserved (pragma is its own category)", p)
-		}
-		prefixes = append(prefixes, p)
+		groups = append(groups, prefixes)
 	}
-	for i, a := range prefixes {
-		for _, b := range prefixes[i+1:] {
-			if a == b {
-				return nil, fmt.Errorf("qml.Compile: duplicate prefix %q", a)
-			}
-			short, long := a, b
-			if len(b) < len(a) {
-				short, long = b, a
-			}
-			if strings.HasPrefix(long, short) {
-				return nil, fmt.Errorf("qml.Compile: overlapping prefixes %q and %q (%q is a prefix of %q)", a, b, short, long)
+	return &Classifier{groups: groups}, nil
+}
+
+func isQtReservedPrefix(p string) bool {
+	return strings.HasPrefix(p, "Qt") || strings.HasPrefix(p, "qt") ||
+		p == "QML" || strings.HasPrefix(p, "QML.")
+}
+
+// matchGroup returns the index of the group holding the longest prefix
+// matching text, or false when no prefix matches.
+func (c *Classifier) matchGroup(text string) (int, bool) {
+	best, bestLen := -1, 0
+	for i, prefixes := range c.groups {
+		for _, p := range prefixes {
+			if len(p) > bestLen && strings.HasPrefix(text, p) {
+				best, bestLen = i, len(p)
 			}
 		}
 	}
-	return &Classifier{firstPartyPrefixes: prefixes}, nil
+	return best, best >= 0
 }
