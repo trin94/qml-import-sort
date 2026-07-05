@@ -10,6 +10,7 @@ A tool to organize and sort QML import statements.
 
 > [!CAUTION]
 > This tool is in early development. Use at your own risk.
+> The CLI is not stable yet — flags and behavior may change in breaking ways until version 1.0.0.
 
 > [!IMPORTANT]
 > This is a vibe-coded project — most of the code was written collaboratively with an AI assistant.
@@ -17,7 +18,7 @@ A tool to organize and sort QML import statements.
 > [!NOTE]
 > Comments between two imports are hoisted into a single comment section above the imports — they do not travel with their original import line through sorting. To attach a note to a specific import, put it as a trailing comment on the same line (e.g. `import QtQuick // note`).
 
-## Example
+## Examples
 
 Imports are grouped into pragmas, Qt, default, custom sections (opt-in), and relative — sorted and de-duplicated within each group, separated by a blank line.
 
