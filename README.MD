@@ -18,6 +18,28 @@ A tool to organize and sort QML import statements.
 > [!NOTE]
 > Comments between two imports are hoisted into a single comment section above the imports — they do not travel with their original import line through sorting. To attach a note to a specific import, put it as a trailing comment on the same line (e.g. `import QtQuick // note`).
 
+## Usage
+
+```shell
+# Format files or directories in place
+qmlimportsort Main.qml
+qmlimportsort src/
+
+# Dry run — print paths that would change, exit 1 if any
+qmlimportsort --check src/
+
+# Print formatted content to stdout, leave file untouched
+qmlimportsort --stdout Main.qml
+
+# Pipe through stdin/stdout
+cat Main.qml | qmlimportsort --stdin
+
+# Give your project's modules their own section (repeatable, comma-separated)
+qmlimportsort --group io.github.mpvqc. src/
+```
+
+Run `qmlimportsort --help` for the full flag list.
+
 ## Examples
 
 Imports are grouped into pragmas, Qt, default, custom sections (opt-in), and relative — sorted and de-duplicated within each group, separated by a blank line.
@@ -25,6 +47,7 @@ Imports are grouped into pragmas, Qt, default, custom sections (opt-in), and rel
 Given this file:
 
 <!-- test:input -->
+
 ```qml
 // SPDX-FileCopyrightText: Jane Doe
 //
@@ -46,6 +69,7 @@ Item {}
 `qmlimportsort Main.qml` applies the default grouping — everything that is not Qt or relative shares one section:
 
 <!-- test:expect -->
+
 ```qml
 // SPDX-FileCopyrightText: Jane Doe
 //
@@ -70,6 +94,7 @@ Item {}
 `qmlimportsort --group MyApp. Main.qml` gives the project's own modules their own section:
 
 <!-- test:expect -->
+
 ```qml
 // SPDX-FileCopyrightText: Jane Doe
 //
@@ -95,6 +120,7 @@ Item {}
 `qmlimportsort --group Company. --group MyApp. Main.qml` splits further — one section per namespace, in flag order:
 
 <!-- test:expect -->
+
 ```qml
 // SPDX-FileCopyrightText: Jane Doe
 //
@@ -117,28 +143,6 @@ import "../components"
 
 Item {}
 ```
-
-## Usage
-
-```shell
-# Format files or directories in place
-qmlimportsort Main.qml
-qmlimportsort src/
-
-# Dry run — print paths that would change, exit 1 if any
-qmlimportsort --check src/
-
-# Print formatted content to stdout, leave file untouched
-qmlimportsort --stdout Main.qml
-
-# Pipe through stdin/stdout
-cat Main.qml | qmlimportsort --stdin
-
-# Give your project's modules their own section (repeatable, comma-separated)
-qmlimportsort --group io.github.mpvqc. src/
-```
-
-Run `qmlimportsort --help` for the full flag list.
 
 ## Development
 
