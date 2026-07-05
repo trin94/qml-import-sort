@@ -146,7 +146,7 @@ Item {}
 
 ## Development
 
-Requires Go 1.24+.
+Requires Go 1.26+.
 
 ```shell
 just build
