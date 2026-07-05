@@ -79,7 +79,7 @@ import MyApp.Views
 import "./components"
 ```
 
-End a prefix with `.` to avoid catching sibling modules: `MyApp.` matches `MyApp.Views` but not `MyAppExtras`. Invalid flags (empty, `.`-leading, Qt-reserved, or duplicate prefixes) exit 2 before any file is touched.
+End a prefix with `.` to avoid catching sibling modules: `MyApp.` matches `MyApp.Views` but not `MyAppExtras`. Invalid flags (empty, never-matchable, Qt-reserved, or duplicate prefixes) exit 2 before any file is touched.
 
 Full classification and validation semantics live in [INTERNAL_API.md](INTERNAL_API.md).
 

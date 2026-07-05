@@ -91,6 +91,48 @@ func TestCompile(t *testing.T) {
 			name: "overlapping prefixes across groups are accepted",
 			opts: Options{Groups: [][]string{{"Foo."}, {"Foo.Bar."}}},
 		},
+		{
+			name:            "Qt-reserved rejection names the namespace policy",
+			opts:            Options{Groups: [][]string{{"QtCustom"}}},
+			wantErrContains: "reserved",
+		},
+		{
+			name:            "prefix with a run of spaces can never match and is rejected",
+			opts:            Options{Groups: [][]string{{"My  Lib"}}},
+			wantErrContains: `"My  Lib"`,
+		},
+		{
+			name:            "prefix containing a tab can never match and is rejected",
+			opts:            Options{Groups: [][]string{{"My\tLib"}}},
+			wantErrContains: "can never match",
+		},
+		{
+			name:            "prefix with non-ASCII module name can never match and is rejected",
+			opts:            Options{Groups: [][]string{{"Café."}}},
+			wantErrContains: `"Café."`,
+		},
+		{
+			name:            "prefix starting with a digit can never match and is rejected",
+			opts:            Options{Groups: [][]string{{"9foo"}}},
+			wantErrContains: `"9foo"`,
+		},
+		{
+			name:            "prefix starting with a quote can never match and is rejected",
+			opts:            Options{Groups: [][]string{{`"x`}}},
+			wantErrContains: "can never match",
+		},
+		{
+			name: "prefix 'pragma' is accepted since a module may be named pragma",
+			opts: Options{Groups: [][]string{{"pragma"}}},
+		},
+		{
+			name: "underscore-leading prefix is accepted",
+			opts: Options{Groups: [][]string{{"_private."}}},
+		},
+		{
+			name: "prefix extending past the module name is accepted",
+			opts: Options{Groups: [][]string{{"MyLib 1.0"}}},
+		},
 	}
 
 	for _, tc := range cases {

@@ -45,10 +45,14 @@ type Options struct {
 	//
 	//   - a group without prefixes
 	//   - empty prefix (after trimming)
-	//   - prefix starting with "."
-	//   - prefix starting with "Qt" or "qt", equal to "QML", or
-	//     starting with "QML." (Qt-owned names always stay in the Qt
-	//     section)
+	//   - a prefix that can never match: containing a tab or a run of
+	//     two or more spaces (import text is normalized to single
+	//     spaces), or whose module-name part is not a valid QML-name
+	//     prefix (ASCII letter or underscore first; then letters,
+	//     digits, underscores, dots)
+	//   - a Qt-reserved prefix — starting with "Qt" or "qt", equal to
+	//     "QML", or starting with "QML." — the Qt/QML namespace cannot
+	//     be grouped
 	//   - the same prefix listed twice anywhere
 	Groups [][]string
 }
@@ -77,16 +81,16 @@ func Compile(opts Options) (*Classifier, error) {
 		prefixes := make([]string, 0, len(rawGroup))
 		for _, raw := range rawGroup {
 			p := strings.TrimSpace(raw)
-			if p == "" {
+			switch {
+			case p == "":
 				return nil, errors.New("qml.Compile: empty prefix")
-			}
-			if strings.HasPrefix(p, ".") {
-				return nil, fmt.Errorf("qml.Compile: prefix %q starts with %q", p, ".")
-			}
-			if isQtReservedPrefix(p) {
-				return nil, fmt.Errorf("qml.Compile: prefix %q is reserved (Qt-owned names always stay in the Qt section)", p)
-			}
-			if seen[p] {
+			case strings.ContainsAny(p, "\t\r\n") || strings.Contains(p, "  "):
+				return nil, fmt.Errorf("qml.Compile: prefix %q can never match: import text uses single spaces", p)
+			case !isMatchablePrefix(p):
+				return nil, fmt.Errorf("qml.Compile: prefix %q can never match a QML module name", p)
+			case isQtReservedPrefix(p):
+				return nil, fmt.Errorf("qml.Compile: prefix %q is reserved: the Qt/QML namespace cannot be grouped", p)
+			case seen[p]:
 				return nil, fmt.Errorf("qml.Compile: duplicate prefix %q", p)
 			}
 			seen[p] = true
@@ -100,6 +104,24 @@ func Compile(opts Options) (*Classifier, error) {
 func isQtReservedPrefix(p string) bool {
 	return strings.HasPrefix(p, "Qt") || strings.HasPrefix(p, "qt") ||
 		p == "QML" || strings.HasPrefix(p, "QML.")
+}
+
+// isMatchablePrefix reports whether p could prefix the whitespace-
+// normalized text of a groupable import: its module-name part must be
+// a valid QML-name prefix. Anything after the first space (version,
+// alias, trailing comment) is deliberately not validated.
+func isMatchablePrefix(p string) bool {
+	name, _, _ := strings.Cut(p, " ")
+	if !isLetter(name[0]) && name[0] != '_' {
+		return false
+	}
+	for i := 1; i < len(name); i++ {
+		c := name[i]
+		if !isLetter(c) && !isDigit(c) && c != '_' && c != '.' {
+			return false
+		}
+	}
+	return true
 }
 
 // matchGroup returns the index of the group holding the longest prefix
