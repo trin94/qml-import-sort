@@ -16,7 +16,7 @@ The flag list, synopsis, and exact mode behavior live in `qmlimportsort --help` 
 | 1    | At least one file changed (write mode) or would change (check mode).             |
 | 2    | Usage error, or one or more inputs failed (missing file, parse error, IO error). |
 
-`--stdin` and `--stdout` (without `--check`) always exit 0 on success — they are pipe-style modes; the user already sees the output and shell `&&` chains shouldn't break on a transformation.
+`--stdin` (without `--check`) and `--stdout` always exit 0 on success — they are pipe-style modes; the user already sees the output and shell `&&` chains shouldn't break on a transformation. Combining `--stdout` with `--check` is a usage error.
 
 ## Behavior guarantees
 
@@ -30,7 +30,7 @@ The flag list, synopsis, and exact mode behavior live in `qmlimportsort --help` 
 
 ## Import grouping (`--group`)
 
-Imports are emitted in five sections, separated by blank lines and each sorted and deduplicated: **pragmas**, **Qt**, **everything else**, **custom sections**, **relative** (quoted paths).
+Imports are emitted in this order, separated by blank lines and each sorted and deduplicated: **pragmas**, **Qt**, **default** (everything no group claims), **custom sections**, **relative** (quoted paths).
 
 `--group <prefix>[,<prefix>...]` declares one custom section holding every import that starts with one of its prefixes. Repeat the flag to declare more sections; they appear in the order given.
 
@@ -79,7 +79,7 @@ import MyApp.Views
 import "./components"
 ```
 
-End a prefix with `.` to avoid catching sibling modules: `MyApp.` matches `MyApp.Views` but not `MyAppExtras`. Invalid flags (empty, Qt-reserved, or duplicate prefixes) exit 2 before any file is touched.
+End a prefix with `.` to avoid catching sibling modules: `MyApp.` matches `MyApp.Views` but not `MyAppExtras`. Invalid flags (empty, `.`-leading, Qt-reserved, or duplicate prefixes) exit 2 before any file is touched.
 
 Full classification and validation semantics live in [INTERNAL_API.md](INTERNAL_API.md).
 

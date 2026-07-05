@@ -21,7 +21,7 @@ type Options struct {
 	// import:
 	//
 	//  1. pragma keyword                → pragma
-	//  2. Qt[A-Z0-9.] pattern or QML    → qt
+	//  2. Qt[A-Z0-9.], QML, or QML.…    → qt
 	//  3. text starts with " or '       → relative
 	//  4. longest matching prefix       → that prefix's group
 	//  5. otherwise (valid identifier)  → default
@@ -40,8 +40,8 @@ type Options struct {
 	// Prefixes are trimmed of leading and trailing whitespace before
 	// validation and matching.
 	//
-	// Compile validates each group and returns an error naming the
-	// offending prefix if any rule is violated:
+	// Compile validates each group and returns an error identifying
+	// the offending prefix or group if any rule is violated:
 	//
 	//   - a group without prefixes
 	//   - empty prefix (after trimming)
@@ -65,7 +65,8 @@ type Classifier struct {
 
 // Compile validates opts and returns a Classifier suitable for Format.
 // See Options.Groups for the validation rules; Compile returns an
-// error naming the offending prefix when any rule is violated.
+// error identifying the offending prefix or group when any rule is
+// violated.
 func Compile(opts Options) (*Classifier, error) {
 	groups := make([][]string, 0, len(opts.Groups))
 	seen := make(map[string]bool)
@@ -102,7 +103,7 @@ func isQtReservedPrefix(p string) bool {
 }
 
 // matchGroup returns the index of the group holding the longest prefix
-// matching text, or false when no prefix matches.
+// matching text; the boolean reports whether any prefix matched.
 func (c *Classifier) matchGroup(text string) (int, bool) {
 	best, bestLen := -1, 0
 	for i, prefixes := range c.groups {

@@ -20,7 +20,7 @@ internal/
 └── fs/      # I/O shell: file reads, directory walks, atomic writes, stdin/stdout glue.
 ```
 
-`main` imports `internal/fs`. `internal/fs` imports `internal/qml`. `internal/qml` imports only the stdlib's pure packages.
+`main` imports `internal/fs` and `internal/qml` (for `Compile`). `internal/fs` imports `internal/qml`. `internal/qml` imports only the stdlib's pure packages.
 
 ## Why `Compile` is separate from `Format`
 
@@ -35,12 +35,13 @@ The output order of the import block is fixed: pragmas, Qt, default, custom `--g
 Classification does not depend on flag order — it is decided per import:
 
 - **Relative** matches by syntax: the import target is a quoted path.
-- **Qt** matches modules shipped with Qt: names starting with `Qt` followed by an uppercase letter, digit, or dot (`QtQuick`, `Qt.labs.settings`, `Qt5Compat.GraphicalEffects`), plus the base language module `QML`.
+- **Qt** matches modules shipped with Qt: names starting with `Qt` followed by an uppercase letter, digit, or dot (`QtQuick`, `Qt.labs.settings`, `Qt5Compat.GraphicalEffects`), plus the base language module `QML` and its `QML.` subpaths.
 - **Custom sections** match by the longest matching prefix across *all* `--group` flags. A prefix is a literal match against the whitespace-normalized text after `import`; a trailing `.` creates a namespace boundary (`io.github.mpvqc.` matches `io.github.mpvqc.Foo` but not `io.github.mpvqcExternal`). Prefixes are trimmed of surrounding whitespace.
 - **Default** takes whatever is left.
 
 Validation happens in `qml.Compile`, so a bad group definition is a usage error (exit 2) before any file is touched:
 
+- a group with no prefixes at all
 - empty prefix, or prefix starting with `.`
 - Qt-reserved prefix: starting with `Qt` or `qt`, equal to `QML`, or starting with `QML.` — Qt-owned names always stay in the Qt section
 - the same prefix listed twice anywhere
