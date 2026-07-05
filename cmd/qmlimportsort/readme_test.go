@@ -27,7 +27,9 @@ func TestReadmeExamples(t *testing.T) {
 	)
 	commandRe := regexp.MustCompile("`(qmlimportsort [^`]+)`")
 
-	readme := readFile(t, filepath.Join("..", "..", "README.MD"))
+	// Normalize line endings so a CRLF checkout (e.g. Windows CI with
+	// autocrlf) parses and compares the same as an LF one.
+	readme := strings.ReplaceAll(readFile(t, filepath.Join("..", "..", "README.MD")), "\r\n", "\n")
 
 	inputParts := strings.Split(readme, inputMarker)
 	if len(inputParts) != 2 {
