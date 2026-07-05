@@ -28,8 +28,65 @@ The flag list, synopsis, and exact mode behavior live in `qmlimportsort --help` 
 - **Processing order**: inputs in the order given on the command line; entries within a directory in lexical order, so `--check` output is deterministic.
 - **`--stdout` requires exactly one file**: there is no unambiguous way to concatenate multiple files' output.
 
+## Import grouping (`--group`)
+
+Imports are emitted in five sections, separated by blank lines and each sorted and deduplicated: **pragmas**, **Qt**, **everything else**, **custom sections**, **relative** (quoted paths).
+
+`--group <prefix>[,<prefix>...]` declares one custom section holding every import that starts with one of its prefixes. Repeat the flag to declare more sections; they appear in the order given.
+
+```shell
+# One section for company libraries, one for the app's own modules
+qmlimportsort --group Company.Shared.,Company.Widgets. --group MyApp. src/
+
+# The same prefixes as three separate sections
+qmlimportsort --group Company.Shared. --group Company.Widgets. --group MyApp. src/
+```
+
+The first command formats a file like this:
+
+```qml
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Controls
+
+import org.kde.kirigami as Kirigami
+
+import Company.Shared.Logging
+import Company.Widgets.Buttons
+
+import MyApp.Views
+
+import "./components"
+```
+
+The second command puts every namespace in its own section:
+
+```qml
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Controls
+
+import org.kde.kirigami as Kirigami
+
+import Company.Shared.Logging
+
+import Company.Widgets.Buttons
+
+import MyApp.Views
+
+import "./components"
+```
+
+End a prefix with `.` to avoid catching sibling modules: `MyApp.` matches `MyApp.Views` but not `MyAppExtras`. Invalid flags (empty, Qt-reserved, or duplicate prefixes) exit 2 before any file is touched.
+
+Full classification and validation semantics live in [INTERNAL_API.md](INTERNAL_API.md).
+
 ## Out of scope (deferred)
 
+- Config file (YAML or TOML). Planned — the repeatable `--group` flag is designed to map 1:1 onto it (schema sketch in [INTERNAL_API.md](INTERNAL_API.md)); CLI flags will take precedence when both are present.
+- Named prefix groups. Useful only once a config file exists (readability, error messages).
 - Subcommands (`format`, `check`, etc.) — can be added later non-breakingly if a genuinely new verb shows up.
 - `.gitignore` / `.qmlimportsortignore` support.
 - `--exclude` / `--include` patterns.
