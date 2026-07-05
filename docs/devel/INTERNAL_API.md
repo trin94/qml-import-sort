@@ -42,8 +42,9 @@ Classification does not depend on flag order — it is decided per import:
 Validation happens in `qml.Compile`, so a bad group definition is a usage error (exit 2) before any file is touched:
 
 - a group with no prefixes at all
-- empty prefix, or prefix starting with `.`
-- Qt-reserved prefix: starting with `Qt` or `qt`, equal to `QML`, or starting with `QML.` — Qt-owned names always stay in the Qt section
+- empty prefix
+- a prefix that can never match an import: internal tabs or runs of spaces (import text is normalized to single spaces), or a module-name part that is not a valid QML-name prefix (ASCII letter or underscore first; then letters, digits, underscores, dots)
+- Qt-reserved prefix: starting with `Qt` or `qt`, equal to `QML`, or starting with `QML.` — the Qt/QML namespace cannot be grouped
 - the same prefix listed twice anywhere
 
 Overlapping (non-identical) prefixes are legal — the longest match wins, and because exact duplicates are rejected there are no ties.
