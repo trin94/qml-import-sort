@@ -15,7 +15,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/biomejs/pre-commit"
-rev = "v2.4.13"
+rev = "v2.5.2"
 hooks = [
     {
         id = "biome-check",
@@ -28,7 +28,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/tombi-toml/tombi-pre-commit"
-rev = "v0.9.21"
+rev = "v1.1.7"
 hooks = [
     {
         id = "tombi-format",
