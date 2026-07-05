@@ -56,7 +56,8 @@ import (
 // Line endings are detected from the input — the first \n, \r\n, or
 // \r wins — and used throughout the output.
 //
-// A file with no imports (and no pragmas) is returned unchanged.
+// A file with no imports (and no pragmas) is returned unchanged,
+// except that leading blank lines are still stripped.
 //
 // Returns an error if a line inside the block is not a pragma, import,
 // comment, or blank. Options validation errors come from Compile, not

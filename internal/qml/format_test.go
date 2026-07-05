@@ -85,7 +85,7 @@ func TestFormatClassification(t *testing.T) {
 			},
 		},
 		{
-			name:       "single dotted third-party import passes through unchanged",
+			name:       "single dotted default-section import passes through unchanged",
 			lineEnding: "\n",
 			input: []string{
 				"import io.github.me 1.0",
@@ -101,7 +101,7 @@ func TestFormatClassification(t *testing.T) {
 			},
 		},
 		{
-			name:       "single bare-identifier third-party import passes through unchanged",
+			name:       "single bare-identifier default-section import passes through unchanged",
 			lineEnding: "\n",
 			input: []string{
 				"import MyModule",
@@ -189,7 +189,7 @@ func TestFormatClassification(t *testing.T) {
 			},
 		},
 		{
-			name:       "module name merely starting with QML stays third-party",
+			name:       "module name merely starting with QML stays in the default section",
 			lineEnding: "\n",
 			input: []string{
 				"import QMLFoo",
@@ -244,7 +244,7 @@ func TestFormatClassification(t *testing.T) {
 			},
 		},
 		{
-			name:       "dotted third-party import without version classifies correctly",
+			name:       "dotted default-section import without version classifies correctly",
 			lineEnding: "\n",
 			input: []string{
 				"import io.github.me",
@@ -260,7 +260,7 @@ func TestFormatClassification(t *testing.T) {
 			},
 		},
 		{
-			name:       "bare-identifier third-party import with version classifies correctly",
+			name:       "bare-identifier default-section import with version classifies correctly",
 			lineEnding: "\n",
 			input: []string{
 				"import MyModule 1.0",
