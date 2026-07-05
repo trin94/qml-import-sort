@@ -23,6 +23,7 @@ Imports are grouped into pragmas, Qt, default, custom sections (opt-in), and rel
 
 Given this file:
 
+<!-- test:input -->
 ```qml
 // SPDX-FileCopyrightText: Jane Doe
 //
@@ -43,6 +44,7 @@ Item {}
 
 `qmlimportsort Main.qml` applies the default grouping — everything that is not Qt or relative shares one section:
 
+<!-- test:expect -->
 ```qml
 // SPDX-FileCopyrightText: Jane Doe
 //
@@ -66,6 +68,7 @@ Item {}
 
 `qmlimportsort --group MyApp. Main.qml` gives the project's own modules their own section:
 
+<!-- test:expect -->
 ```qml
 // SPDX-FileCopyrightText: Jane Doe
 //
@@ -90,6 +93,7 @@ Item {}
 
 `qmlimportsort --group Company. --group MyApp. Main.qml` splits further — one section per namespace, in flag order:
 
+<!-- test:expect -->
 ```qml
 // SPDX-FileCopyrightText: Jane Doe
 //

@@ -193,5 +193,4 @@ tags
 # Added by goreleaser init:
 dist/
 
-qmlimportsort
-!cmd/
+/qmlimportsort
