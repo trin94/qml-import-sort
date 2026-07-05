@@ -20,7 +20,7 @@ type Options struct {
 	// the first match wins:
 	//
 	//  1. pragma keyword                → pragma
-	//  2. Qt[A-Z0-9.] pattern           → qt
+	//  2. Qt[A-Z0-9.] pattern or QML    → qt
 	//  3. text starts with " or '       → relative
 	//  4. FirstPartyPrefixes match      → first-party
 	//  5. otherwise (valid identifier)  → third-party
@@ -46,6 +46,8 @@ type Options struct {
 	//   - empty (after trimming)
 	//   - starts with "."
 	//   - starts with "Qt" or "qt" (Qt is its own category)
+	//   - equals "QML" or starts with "QML." (the QML base module
+	//     belongs to the Qt category)
 	//   - equals "pragma" (pragma is its own category)
 	//   - any two prefixes overlap — identical, or one is a prefix of
 	//     the other (reported as "duplicate" or "overlapping"
@@ -79,6 +81,9 @@ func Compile(opts Options) (*Classifier, error) {
 		}
 		if strings.HasPrefix(p, "Qt") || strings.HasPrefix(p, "qt") {
 			return nil, fmt.Errorf("qml.Compile: prefix %q starts with Qt/qt (Qt is its own category)", p)
+		}
+		if p == "QML" || strings.HasPrefix(p, "QML.") {
+			return nil, fmt.Errorf("qml.Compile: prefix %q is reserved (the QML base module belongs to the Qt category)", p)
 		}
 		if p == "pragma" {
 			return nil, fmt.Errorf("qml.Compile: prefix %q is reserved (pragma is its own category)", p)

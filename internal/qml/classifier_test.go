@@ -51,6 +51,20 @@ func TestCompile(t *testing.T) {
 			wantErrContains: `"QtCustom"`,
 		},
 		{
+			name:            "prefix equal to 'QML' is rejected",
+			opts:            Options{FirstPartyPrefixes: []string{"QML"}},
+			wantErrContains: `"QML"`,
+		},
+		{
+			name:            "prefix starting with 'QML.' is rejected",
+			opts:            Options{FirstPartyPrefixes: []string{"QML.Foo"}},
+			wantErrContains: `"QML.Foo"`,
+		},
+		{
+			name: "prefix merely starting with QML is accepted",
+			opts: Options{FirstPartyPrefixes: []string{"QMLFoo"}},
+		},
+		{
 			name:            "duplicate prefix is rejected and names the prefix",
 			opts:            Options{FirstPartyPrefixes: []string{"Foo", "Foo"}},
 			wantErrContains: `"Foo"`,
@@ -70,6 +84,12 @@ func TestCompile(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := Compile(tc.opts)
+			if tc.wantErrContains == "" {
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				return
+			}
 			if err == nil {
 				t.Fatalf("expected error containing %q, got nil", tc.wantErrContains)
 			}

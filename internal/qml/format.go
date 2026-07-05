@@ -391,6 +391,9 @@ func isValidQMLName(s string) bool {
 }
 
 func isQtName(name string) bool {
+	if name == "QML" || strings.HasPrefix(name, "QML.") {
+		return true
+	}
 	if !strings.HasPrefix(name, "Qt") || len(name) < 3 {
 		return false
 	}
